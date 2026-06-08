@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>13 Cards Calculator</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --text: #1f2937;
+            --border: #e5e7eb;
+            --win: #10b981;
+            --lose: #ef4444;
+        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 16px; margin: 0; max-width: 600px; margin: 0 auto; }
+        h1, h2 { text-align: center; color: var(--primary); margin-bottom: 8px; }
+        .section { background: var(--card-bg); padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid var(--border); }
+        
+        /* Players Grid */
+        .players-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #6b7280; }
+        .input-group input { padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+        
+        /* Matchups */
+        .matchup { border-bottom: 2px solid var(--border); padding-bottom: 16px; margin-bottom: 16px; }
+        .matchup:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .matchup-title { font-weight: bold; font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .hands-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .hand-select { display: flex; flex-direction: column; }
+        .hand-select label { font-size: 11px; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; text-align: center; }
+        select { padding: 8px 4px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; text-align: center; background: #f9fafb; }
+        
+        .royalties-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .royalty-input { display: flex; align-items: center; justify-content: space-between; background: #f9fafb; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); }
+        .royalty-input label { font-size: 13px; }
+        .royalty-input input { width: 60px; padding: 4px; text-align: center; border: 1px solid var(--border); border-radius: 4px; }
+        
+        /* Results Table */
+        .results-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .results-table th, .results-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .results-table th { background: #f9fafb; font-weight: bold; }
+        .results-table tr:last-child td { border-bottom: none; }
+        .score-pos { color: var(--win); font-weight: bold; }
+        .score-neg { color: var(--lose); font-weight: bold; }
+        .score-zero { color: #6b7280; font-weight: bold; }
+        
+        .reset-btn { display: block; width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        .reset-btn:hover { background: var(--primary-hover); }
+
+        .net-preview { font-size: 13px; font-weight: bold; text-align: right; color: #6b7280; }
+    </style>
+</head>
+<body>
+
+    <h1>13 Cards Calculator</h1>
+
+    <div class="section">
+        <h2>Players</h2>
+        <div class="players-grid">
+            <div class="input-group"><label>Player 1</label><input type="text" id="p1-name" value="P1" oninput="updateNames()"></div>
+            <div class="input-group"><label>Player 2</label><input type="text" id="p2-name" value="P2" oninput="updateNames()"></div>
+            <div class="input-group"><label>Player 3</label><input type="text" id="p3-name" value="P3" oninput="updateNames()"></div>
+            <div class="input-group"><label>Player 4</label><input type="text" id="p4-name" value="P4" oninput="updateNames()"></div>
+        </div>
+        <div style="font-size: 12px; color: #6b7280; text-align: center;">
+            <label><input type="checkbox" id="scoop-toggle" checked onchange="calculateAll()"> Enable Scoop Bonus (+3 units)</label>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Round Matchups</h2>
+        <div id="matchups-container">
+            <!-- Matchups generated via JS -->
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Final Net Scores</h2>
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th style="text-align: right;">Net Units</th>
+                </tr>
+            </thead>
+            <tbody id="results-body">
+                <!-- Results generated via JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <button class="reset-btn" onclick="resetRound()">Reset Round</button>
+
+    <script>
+        const pairs = [
+            [1, 2], [1, 3], [1, 4],
+            [2, 3], [2, 4],
+            [3, 4]
+        ];
+
+        let scores = { 1: 0, 2: 0, 3: 0, 4: 0 };
+
+        function getPlayerName(id) {
+            return document.getElementById(`p${id}-name`).value || `Player ${id}`;
+        }
+
+        function buildMatchups() {
+            const container = document.getElementById('matchups-container');
+            container.innerHTML = '';
+
+            pairs.forEach(pair => {
+                const pA = pair[0];
+                const pB = pair[1];
+                const matchId = `${pA}-${pB}`;
+
+                const html = `
+                    <div class="matchup" id="match-${matchId}">
+                        <div class="matchup-title">
+                            <span class="title-text"><span class="name-${pA}">P${pA}</span> vs <span class="name-${pB}">P${pB}</span></span>
+                            <span class="net-preview" id="net-${matchId}">0 / 0</span>
+                        </div>
+                        
+                        <div class="hands-grid">
+                            <div class="hand-select">
+                                <label>Front (3)</label>
+                                <select id="front-${matchId}" onchange="calculateAll()">
+                                    <option value="0">Tie</option>
+                                    <option value="${pA}"><span class="name-${pA}">P${pA}</span> Wins</option>
+                                    <option value="${pB}"><span class="name-${pB}">P${pB}</span> Wins</option>
+                                </select>
+                            </div>
+                            <div class="hand-select">
+                                <label>Middle (5)</label>
+                                <select id="mid-${matchId}" onchange="calculateAll()">
+                                    <option value="0">Tie</option>
+                                    <option value="${pA}"><span class="name-${pA}">P${pA}</span> Wins</option>
+                                    <option value="${pB}"><span class="name-${pB}">P${pB}</span> Wins</option>
+                                </select>
+                            </div>
+                            <div class="hand-select">
+                                <label>Back (5)</label>
+                                <select id="back-${matchId}" onchange="calculateAll()">
+                                    <option value="0">Tie</option>
+                                    <option value="${pA}"><span class="name-${pA}">P${pA}</span> Wins</option>
+                                    <option value="${pB}"><span class="name-${pB}">P${pB}</span> Wins</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="royalties-grid">
+                            <div class="royalty-input">
+                                <label><span class="name-${pA}">P${pA}</span> Royalty</label>
+                                <input type="number" id="royalty-${pA}-${matchId}" value="0" min="0" oninput="calculateAll()">
+                            </div>
+                            <div class="royalty-input">
+                                <label><span class="name-${pB}">P${pB}</span> Royalty</label>
+                                <input type="number" id="royalty-${pB}-${matchId}" value="0" min="0" oninput="calculateAll()">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+            updateNames();
+        }
+
+        function updateNames() {
+            [1, 2, 3, 4].forEach(id => {
+                const name = getPlayerName(id);
+                document.querySelectorAll(`.name-${id}`).forEach(el => {
+                    el.textContent = name;
+                });
+                // Update dropdown options
+                pairs.forEach(pair => {
+                    const matchId = `${pair[0]}-${pair[1]}`;
+                    if(document.getElementById(`front-${matchId}`)) {
+                        ['front', 'mid', 'back'].forEach(hand => {
+                            const sel = document.getElementById(`${hand}-${matchId}`);
+                            sel.options[1].text = (pair[0] === id ? name : getPlayerName(pair[0])) + " Wins";
+                            sel.options[2].text = (pair[1] === id ? name : getPlayerName(pair[1])) + " Wins";
+                        });
+                    }
+                });
+            });
+            calculateAll();
+        }
+
+        function calculateAll() {
+            scores = { 1: 0, 2: 0, 3: 0, 4: 0 };
+            const scoopEnabled = document.getElementById('scoop-toggle').checked;
+
+            pairs.forEach(pair => {
+                const pA = pair[0];
+                const pB = pair[1];
+                const matchId = `${pA}-${pB}`;
+
+                let pA_wins = 0;
+                let pB_wins = 0;
+
+                // Tally Hands
+                ['front', 'mid', 'back'].forEach(hand => {
+                    const val = parseInt(document.getElementById(`${hand}-${matchId}`).value);
+                    if (val === pA) pA_wins++;
+                    if (val === pB) pB_wins++;
+                });
+
+                let pA_points = pA_wins;
+                let pB_points = pB_wins;
+
+                // Scoop Bonus
+                if (scoopEnabled) {
+                    if (pA_wins === 3) pA_points += 3;
+                    if (pB_wins === 3) pB_points += 3;
+                }
+
+                // Royalties
+                const rA = parseInt(document.getElementById(`royalty-${pA}-${matchId}`).value) || 0;
+                const rB = parseInt(document.getElementById(`royalty-${pB}-${matchId}`).value) || 0;
+
+                pA_points += rA;
+                pB_points += rB;
+
+                const netA = pA_points - pB_points;
+                const netB = pB_points - pA_points;
+
+                scores[pA] += netA;
+                scores[pB] += netB;
+
+                // Update Matchup Preview
+                const previewStr = `${getPlayerName(pA)}: ${netA > 0 ? '+'+netA : netA} | ${getPlayerName(pB)}: ${netB > 0 ? '+'+netB : netB}`;
+                document.getElementById(`net-${matchId}`).textContent = previewStr;
+            });
+
+            renderResults();
+        }
+
+        function renderResults() {
+            const tbody = document.getElementById('results-body');
+            tbody.innerHTML = '';
+
+            [1, 2, 3, 4].forEach(id => {
+                const score = scores[id];
+                let scoreClass = 'score-zero';
+                let scoreText = score;
+
+                if (score > 0) {
+                    scoreClass = 'score-pos';
+                    scoreText = '+' + score;
+                } else if (score < 0) {
+                    scoreClass = 'score-neg';
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${getPlayerName(id)}</td>
+                        <td style="text-align: right;" class="${scoreClass}">${scoreText}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function resetRound() {
+            if(confirm("Are you sure you want to clear all hands and royalties?")) {
+                document.querySelectorAll('select').forEach(sel => sel.value = "0");
+                document.querySelectorAll('input[type="number"]').forEach(inp => inp.value = "0");
+                calculateAll();
+            }
+        }
+
+        // Initialize
+        buildMatchups();
+    </script>
+</body>
+</html>
