@@ -3,277 +3,375 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>13 Cards Calculator</title>
+    <title>13 Cards Best Hand Solver</title>
     <style>
         :root {
-            --bg: #f0f2f5;
+            --bg: #f3f4f6;
             --card-bg: #ffffff;
             --primary: #2563eb;
             --primary-hover: #1d4ed8;
             --text: #1f2937;
-            --border: #e5e7eb;
-            --win: #10b981;
-            --lose: #ef4444;
+            --border: #d1d5db;
+            --red-suit: #ef4444;
+            --black-suit: #111827;
+            --success: #10b981;
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: var(--bg); color: var(--text); padding: 16px; margin: 0; max-width: 600px; margin: 0 auto; }
+        body { background-color: var(--bg); color: var(--text); padding: 16px; margin: 0; max-width: 700px; margin: 0 auto; }
         h1, h2 { text-align: center; color: var(--primary); margin-bottom: 8px; }
-        .section { background: var(--card-bg); padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid var(--border); }
+        p.subtitle { text-align: center; color: #6b7280; font-size: 14px; margin-top: -4px; margin-bottom: 24px; }
         
-        /* Players Grid */
-        .players-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-        .input-group { display: flex; flex-direction: column; }
-        .input-group label { font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #6b7280; }
-        .input-group input { padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+        .section { background: var(--card-bg); padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid var(--border); }
         
-        /* Matchups */
-        .matchup { border-bottom: 2px solid var(--border); padding-bottom: 16px; margin-bottom: 16px; }
-        .matchup:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-        .matchup-title { font-weight: bold; font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .hands-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-        .hand-select { display: flex; flex-direction: column; }
-        .hand-select label { font-size: 11px; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; text-align: center; }
-        select { padding: 8px 4px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; text-align: center; background: #f9fafb; }
-        
-        .royalties-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .royalty-input { display: flex; align-items: center; justify-content: space-between; background: #f9fafb; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); }
-        .royalty-input label { font-size: 13px; }
-        .royalty-input input { width: 60px; padding: 4px; text-align: center; border: 1px solid var(--border); border-radius: 4px; }
-        
-        /* Results Table */
-        .results-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .results-table th, .results-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
-        .results-table th { background: #f9fafb; font-weight: bold; }
-        .results-table tr:last-child td { border-bottom: none; }
-        .score-pos { color: var(--win); font-weight: bold; }
-        .score-neg { color: var(--lose); font-weight: bold; }
-        .score-zero { color: #6b7280; font-weight: bold; }
-        
-        .reset-btn { display: block; width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; }
-        .reset-btn:hover { background: var(--primary-hover); }
+        /* Card Picker Grid */
+        .suit-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; justify-content: center; }
+        .card-btn { 
+            width: 40px; height: 56px; border: 1px solid var(--border); border-radius: 6px; 
+            background: white; font-weight: bold; font-size: 16px; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; cursor: pointer; transition: 0.1s;
+        }
+        .card-btn:hover { background: #f9fafb; }
+        .card-btn.selected { background: var(--primary); color: white !important; border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }
+        .card-red { color: var(--red-suit); }
+        .card-black { color: var(--black-suit); }
 
-        .net-preview { font-size: 13px; font-weight: bold; text-align: right; color: #6b7280; }
+        /* Actions */
+        .status-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+        .count { font-weight: bold; font-size: 16px; }
+        .count.ready { color: var(--success); }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-primary { background: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-clear { background: #6b7280; }
+        .btn-clear:hover { background: #4b5563; }
+
+        /* Results */
+        #results-container { display: flex; flex-direction: column; gap: 16px; }
+        .result-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .result-header { background: #f9fafb; padding: 10px 16px; font-weight: bold; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;}
+        .hand-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+        .hand-row:last-child { border-bottom: none; }
+        .hand-name { font-size: 12px; font-weight: bold; color: #6b7280; text-transform: uppercase; width: 60px; }
+        .hand-desc { font-size: 13px; font-weight: bold; text-align: right; color: var(--primary); flex: 1; }
+        .mini-cards { display: flex; gap: 4px; flex: 2; justify-content: center; }
+        .mini-card { 
+            width: 32px; height: 44px; border: 1px solid var(--border); border-radius: 4px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            font-size: 12px; font-weight: bold; background: white;
+        }
+
+        #loading { text-align: center; font-weight: bold; color: var(--primary); display: none; padding: 20px; }
     </style>
 </head>
 <body>
 
-    <h1>13 Cards Calculator</h1>
+    <h1>13 Cards Solver</h1>
+    <p class="subtitle">Select exactly 13 cards to find the best possible valid arrangements.</p>
 
     <div class="section">
-        <h2>Players</h2>
-        <div class="players-grid">
-            <div class="input-group"><label>Player 1</label><input type="text" id="p1-name" value="P1" oninput="updateNames()"></div>
-            <div class="input-group"><label>Player 2</label><input type="text" id="p2-name" value="P2" oninput="updateNames()"></div>
-            <div class="input-group"><label>Player 3</label><input type="text" id="p3-name" value="P3" oninput="updateNames()"></div>
-            <div class="input-group"><label>Player 4</label><input type="text" id="p4-name" value="P4" oninput="updateNames()"></div>
-        </div>
-        <div style="font-size: 12px; color: #6b7280; text-align: center;">
-            <label><input type="checkbox" id="scoop-toggle" checked onchange="calculateAll()"> Enable Scoop Bonus (+3 units)</label>
+        <div id="deck-grid"></div>
+        
+        <div class="status-bar">
+            <button class="btn btn-clear" onclick="clearSelection()">Clear</button>
+            <div id="selection-count" class="count">0 / 13 Selected</div>
+            <button id="solve-btn" class="btn btn-primary" disabled onclick="startSolving()">Find Hands</button>
         </div>
     </div>
 
-    <div class="section">
-        <h2>Round Matchups</h2>
-        <div id="matchups-container">
-            <!-- Matchups generated via JS -->
-        </div>
+    <div class="section" id="results-section" style="display: none;">
+        <h2>Top Recommended Sets</h2>
+        <div id="loading">Calculating 72,072 combinations...</div>
+        <div id="results-container"></div>
     </div>
-
-    <div class="section">
-        <h2>Final Net Scores</h2>
-        <table class="results-table">
-            <thead>
-                <tr>
-                    <th>Player</th>
-                    <th style="text-align: right;">Net Units</th>
-                </tr>
-            </thead>
-            <tbody id="results-body">
-                <!-- Results generated via JS -->
-            </tbody>
-        </table>
-    </div>
-
-    <button class="reset-btn" onclick="resetRound()">Reset Round</button>
 
     <script>
-        const pairs = [
-            [1, 2], [1, 3], [1, 4],
-            [2, 3], [2, 4],
-            [3, 4]
+        const suits = [
+            { id: 's', symbol: '♠', color: 'card-black' },
+            { id: 'h', symbol: '♥', color: 'card-red' },
+            { id: 'c', symbol: '♣', color: 'card-black' },
+            { id: 'd', symbol: '♦', color: 'card-red' }
         ];
+        const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+        const catNames = ["High Card", "Pair", "Two Pair", "Three of a Kind", "Straight", "Flush", "Full House", "Four of a Kind", "Straight Flush"];
+        
+        let selectedCards = [];
 
-        let scores = { 1: 0, 2: 0, 3: 0, 4: 0 };
-
-        function getPlayerName(id) {
-            return document.getElementById(`p${id}-name`).value || `Player ${id}`;
+        // 1. UI: Build Deck Grid
+        function buildDeck() {
+            const grid = document.getElementById('deck-grid');
+            grid.innerHTML = '';
+            suits.forEach(suit => {
+                const row = document.createElement('div');
+                row.className = 'suit-row';
+                ranks.forEach(rank => {
+                    const btn = document.createElement('div');
+                    btn.className = `card-btn ${suit.color}`;
+                    btn.innerHTML = `<span>${rank}</span><span style="font-size:12px">${suit.symbol}</span>`;
+                    btn.onclick = () => toggleCard(rank, suit, btn);
+                    row.appendChild(btn);
+                });
+                grid.appendChild(row);
+            });
         }
 
-        function buildMatchups() {
-            const container = document.getElementById('matchups-container');
+        function toggleCard(rank, suit, btnElement) {
+            const cardId = `${rank}${suit.id}`;
+            const index = selectedCards.findIndex(c => c.id === cardId);
+            
+            if (index > -1) {
+                selectedCards.splice(index, 1);
+                btnElement.classList.remove('selected');
+            } else {
+                if (selectedCards.length >= 13) return; // Max 13
+                selectedCards.push({ 
+                    id: cardId, 
+                    r: getCardValue(rank), 
+                    s: suit.id, 
+                    symbol: suit.symbol,
+                    display: rank,
+                    color: suit.color
+                });
+                btnElement.classList.add('selected');
+            }
+            updateStatus();
+        }
+
+        function getCardValue(rank) {
+            if (rank === 'A') return 14;
+            if (rank === 'K') return 13;
+            if (rank === 'Q') return 12;
+            if (rank === 'J') return 11;
+            if (rank === 'T') return 10;
+            return parseInt(rank);
+        }
+
+        function clearSelection() {
+            selectedCards = [];
+            document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
+            updateStatus();
+            document.getElementById('results-section').style.display = 'none';
+        }
+
+        function updateStatus() {
+            const countEl = document.getElementById('selection-count');
+            const solveBtn = document.getElementById('solve-btn');
+            countEl.textContent = `${selectedCards.length} / 13 Selected`;
+            
+            if (selectedCards.length === 13) {
+                countEl.classList.add('ready');
+                solveBtn.disabled = false;
+            } else {
+                countEl.classList.remove('ready');
+                solveBtn.disabled = true;
+            }
+        }
+
+        // 2. Core Evaluator Logic
+        function eval5(cards) {
+            let counts = {};
+            let suitCounts = {};
+            cards.forEach(c => {
+                counts[c.r] = (counts[c.r] || 0) + 1;
+                suitCounts[c.s] = (suitCounts[c.s] || 0) + 1;
+            });
+            
+            let isFlush = Object.keys(suitCounts).length === 1;
+            let groups = Object.entries(counts).map(([r, c]) => ({r: Number(r), c})).sort((a,b) => b.c - a.c || b.r - a.r);
+            let ranksOnly = groups.map(g => g.r);
+            
+            let isStraight = false;
+            let straightHigh = 0;
+            
+            if (ranksOnly.length === 5) {
+                if (ranksOnly[0] - ranksOnly[4] === 4) {
+                    isStraight = true;
+                    straightHigh = ranksOnly[0];
+                } else if (ranksOnly.join(',') === "14,5,4,3,2") {
+                    isStraight = true;
+                    straightHigh = 5;
+                }
+            }
+
+            let cat = 0;
+            if (isStraight && isFlush) cat = 8;
+            else if (groups[0].c === 4) cat = 7;
+            else if (groups[0].c === 3 && groups[1].c === 2) cat = 6;
+            else if (isFlush) cat = 5;
+            else if (isStraight) cat = 4;
+            else if (groups[0].c === 3) cat = 3;
+            else if (groups[0].c === 2 && groups[1].c === 2) cat = 2;
+            else if (groups[0].c === 2) cat = 1;
+
+            let score = cat * 10000000000;
+            if (cat === 4 || cat === 8) {
+                score += straightHigh * 100000000;
+            } else if (cat === 5 || cat === 0) {
+                let sortedFlushRanks = cards.map(c=>c.r).sort((a,b)=>b-a);
+                score += sortedFlushRanks[0]*100000000 + sortedFlushRanks[1]*1000000 + sortedFlushRanks[2]*10000 + sortedFlushRanks[3]*100 + sortedFlushRanks[4];
+            } else {
+                let multis = [100000000, 1000000, 10000, 100, 1];
+                for(let i=0; i<groups.length; i++){
+                    score += groups[i].r * multis[i];
+                }
+            }
+            return { score, cat, name: catNames[cat] };
+        }
+
+        function eval3(cards) {
+            let counts = {};
+            cards.forEach(c => {
+                counts[c.r] = (counts[c.r] || 0) + 1;
+            });
+            let groups = Object.entries(counts).map(([r, c]) => ({r: Number(r), c})).sort((a,b) => b.c - a.c || b.r - a.r);
+            
+            let cat = 0;
+            if (groups[0].c === 3) cat = 3;
+            else if (groups[0].c === 2) cat = 1;
+            
+            let score = cat * 10000000000;
+            let multis = [100000000, 1000000, 10000];
+            for(let i=0; i<groups.length; i++){
+                score += groups[i].r * multis[i];
+            }
+            return { score, cat, name: catNames[cat] };
+        }
+
+        function getCombinations(array, k) {
+            const results = [];
+            function helper(start, combo) {
+                if (combo.length === k) {
+                    results.push([...combo]);
+                    return;
+                }
+                for (let i = start; i < array.length; i++) {
+                    combo.push(array[i]);
+                    helper(i + 1, combo);
+                    combo.pop();
+                }
+            }
+            helper(0, []);
+            return results;
+        }
+
+        // 3. Solving Execution
+        function startSolving() {
+            document.getElementById('results-section').style.display = 'block';
+            document.getElementById('results-container').innerHTML = '';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('solve-btn').disabled = true;
+            
+            // Allow UI to update before blocking thread with calculation
+            setTimeout(() => {
+                const results = solveHands(selectedCards);
+                renderResults(results);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('solve-btn').disabled = false;
+            }, 100);
+        }
+
+        function solveHands(cards) {
+            let validHands = [];
+            
+            // Choose 5 for back (1287 combinations)
+            let backCombs = getCombinations(cards, 5);
+            for(let i=0; i<backCombs.length; i++) {
+                let back = backCombs[i];
+                let backEval = eval5(back);
+                
+                // Get remaining 8 cards
+                let rem8 = cards.filter(c => !back.includes(c));
+                
+                // Choose 5 for mid (56 combinations)
+                let midCombs = getCombinations(rem8, 5);
+                for(let j=0; j<midCombs.length; j++) {
+                    let mid = midCombs[j];
+                    let midEval = eval5(mid);
+                    
+                    // Rule Check: Back must beat or tie Middle
+                    if(midEval.score > backEval.score) continue; 
+                    
+                    // Remaining 3 for front
+                    let front = rem8.filter(c => !mid.includes(c));
+                    let frontEval = eval3(front);
+                    
+                    // Rule Check: Middle must beat or tie Front
+                    if(frontEval.score > midEval.score) continue; 
+                    
+                    // Valid!
+                    validHands.push({
+                        front: sortForDisplay(front), mid: sortForDisplay(mid), back: sortForDisplay(back),
+                        frontEval, midEval, backEval,
+                        // Priority Heuristic: Maximize total category strength, favoring powerful front hands
+                        tierSum: (backEval.cat * 2) + (midEval.cat * 2) + (frontEval.cat * 3) 
+                    });
+                }
+            }
+            
+            // Sort to find the "Best" hands
+            validHands.sort((a,b) => {
+                if (b.tierSum !== a.tierSum) return b.tierSum - a.tierSum;
+                if (b.frontEval.score !== a.frontEval.score) return b.frontEval.score - a.frontEval.score;
+                if (b.midEval.score !== a.midEval.score) return b.midEval.score - a.midEval.score;
+                return b.backEval.score - a.backEval.score;
+            });
+            
+            return validHands.slice(0, 5);
+        }
+
+        function sortForDisplay(cards) {
+            return [...cards].sort((a,b) => b.r - a.r);
+        }
+
+        // 4. Rendering
+        function renderResults(results) {
+            const container = document.getElementById('results-container');
             container.innerHTML = '';
+            
+            if (results.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:red; font-weight:bold;">No valid combinations found (Foul Hand)!</p>';
+                return;
+            }
 
-            pairs.forEach(pair => {
-                const pA = pair[0];
-                const pB = pair[1];
-                const matchId = `${pA}-${pB}`;
-
+            results.forEach((res, index) => {
                 const html = `
-                    <div class="matchup" id="match-${matchId}">
-                        <div class="matchup-title">
-                            <span class="title-text"><span class="name-${pA}">P${pA}</span> vs <span class="name-${pB}">P${pB}</span></span>
-                            <span class="net-preview" id="net-${matchId}">0 / 0</span>
+                    <div class="result-card">
+                        <div class="result-header">
+                            <span>Option ${index + 1}</span>
                         </div>
-                        
-                        <div class="hands-grid">
-                            <div class="hand-select">
-                                <label>Front (3)</label>
-                                <select id="front-${matchId}" onchange="calculateAll()">
-                                    <option value="0">Tie</option>
-                                    <option value="${pA}"><span class="name-${pA}">P${pA}</span> Wins</option>
-                                    <option value="${pB}"><span class="name-${pB}">P${pB}</span> Wins</option>
-                                </select>
-                            </div>
-                            <div class="hand-select">
-                                <label>Middle (5)</label>
-                                <select id="mid-${matchId}" onchange="calculateAll()">
-                                    <option value="0">Tie</option>
-                                    <option value="${pA}"><span class="name-${pA}">P${pA}</span> Wins</option>
-                                    <option value="${pB}"><span class="name-${pB}">P${pB}</span> Wins</option>
-                                </select>
-                            </div>
-                            <div class="hand-select">
-                                <label>Back (5)</label>
-                                <select id="back-${matchId}" onchange="calculateAll()">
-                                    <option value="0">Tie</option>
-                                    <option value="${pA}"><span class="name-${pA}">P${pA}</span> Wins</option>
-                                    <option value="${pB}"><span class="name-${pB}">P${pB}</span> Wins</option>
-                                </select>
-                            </div>
+                        <div class="hand-row">
+                            <span class="hand-name">Front</span>
+                            <div class="mini-cards">${renderMiniCards(res.front)}</div>
+                            <span class="hand-desc">${res.frontEval.name}</span>
                         </div>
-
-                        <div class="royalties-grid">
-                            <div class="royalty-input">
-                                <label><span class="name-${pA}">P${pA}</span> Royalty</label>
-                                <input type="number" id="royalty-${pA}-${matchId}" value="0" min="0" oninput="calculateAll()">
-                            </div>
-                            <div class="royalty-input">
-                                <label><span class="name-${pB}">P${pB}</span> Royalty</label>
-                                <input type="number" id="royalty-${pB}-${matchId}" value="0" min="0" oninput="calculateAll()">
-                            </div>
+                        <div class="hand-row">
+                            <span class="hand-name">Middle</span>
+                            <div class="mini-cards">${renderMiniCards(res.mid)}</div>
+                            <span class="hand-desc">${res.midEval.name}</span>
+                        </div>
+                        <div class="hand-row">
+                            <span class="hand-name">Back</span>
+                            <div class="mini-cards">${renderMiniCards(res.back)}</div>
+                            <span class="hand-desc">${res.backEval.name}</span>
                         </div>
                     </div>
                 `;
                 container.innerHTML += html;
             });
-            updateNames();
         }
 
-        function updateNames() {
-            [1, 2, 3, 4].forEach(id => {
-                const name = getPlayerName(id);
-                document.querySelectorAll(`.name-${id}`).forEach(el => {
-                    el.textContent = name;
-                });
-                // Update dropdown options
-                pairs.forEach(pair => {
-                    const matchId = `${pair[0]}-${pair[1]}`;
-                    if(document.getElementById(`front-${matchId}`)) {
-                        ['front', 'mid', 'back'].forEach(hand => {
-                            const sel = document.getElementById(`${hand}-${matchId}`);
-                            sel.options[1].text = (pair[0] === id ? name : getPlayerName(pair[0])) + " Wins";
-                            sel.options[2].text = (pair[1] === id ? name : getPlayerName(pair[1])) + " Wins";
-                        });
-                    }
-                });
-            });
-            calculateAll();
+        function renderMiniCards(cards) {
+            return cards.map(c => `
+                <div class="mini-card ${c.color}">
+                    <span>${c.display}</span>
+                    <span style="font-size:10px">${c.symbol}</span>
+                </div>
+            `).join('');
         }
 
-        function calculateAll() {
-            scores = { 1: 0, 2: 0, 3: 0, 4: 0 };
-            const scoopEnabled = document.getElementById('scoop-toggle').checked;
-
-            pairs.forEach(pair => {
-                const pA = pair[0];
-                const pB = pair[1];
-                const matchId = `${pA}-${pB}`;
-
-                let pA_wins = 0;
-                let pB_wins = 0;
-
-                // Tally Hands
-                ['front', 'mid', 'back'].forEach(hand => {
-                    const val = parseInt(document.getElementById(`${hand}-${matchId}`).value);
-                    if (val === pA) pA_wins++;
-                    if (val === pB) pB_wins++;
-                });
-
-                let pA_points = pA_wins;
-                let pB_points = pB_wins;
-
-                // Scoop Bonus
-                if (scoopEnabled) {
-                    if (pA_wins === 3) pA_points += 3;
-                    if (pB_wins === 3) pB_points += 3;
-                }
-
-                // Royalties
-                const rA = parseInt(document.getElementById(`royalty-${pA}-${matchId}`).value) || 0;
-                const rB = parseInt(document.getElementById(`royalty-${pB}-${matchId}`).value) || 0;
-
-                pA_points += rA;
-                pB_points += rB;
-
-                const netA = pA_points - pB_points;
-                const netB = pB_points - pA_points;
-
-                scores[pA] += netA;
-                scores[pB] += netB;
-
-                // Update Matchup Preview
-                const previewStr = `${getPlayerName(pA)}: ${netA > 0 ? '+'+netA : netA} | ${getPlayerName(pB)}: ${netB > 0 ? '+'+netB : netB}`;
-                document.getElementById(`net-${matchId}`).textContent = previewStr;
-            });
-
-            renderResults();
-        }
-
-        function renderResults() {
-            const tbody = document.getElementById('results-body');
-            tbody.innerHTML = '';
-
-            [1, 2, 3, 4].forEach(id => {
-                const score = scores[id];
-                let scoreClass = 'score-zero';
-                let scoreText = score;
-
-                if (score > 0) {
-                    scoreClass = 'score-pos';
-                    scoreText = '+' + score;
-                } else if (score < 0) {
-                    scoreClass = 'score-neg';
-                }
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${getPlayerName(id)}</td>
-                        <td style="text-align: right;" class="${scoreClass}">${scoreText}</td>
-                    </tr>
-                `;
-            });
-        }
-
-        function resetRound() {
-            if(confirm("Are you sure you want to clear all hands and royalties?")) {
-                document.querySelectorAll('select').forEach(sel => sel.value = "0");
-                document.querySelectorAll('input[type="number"]').forEach(inp => inp.value = "0");
-                calculateAll();
-            }
-        }
-
-        // Initialize
-        buildMatchups();
+        // Init
+        buildDeck();
     </script>
 </body>
 </html>
