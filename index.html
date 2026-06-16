@@ -358,4 +358,74 @@
                     validHands.push({
                         front: sortForDisplay(front), mid: sortForDisplay(mid), back: sortForDisplay(back),
                         frontEval, midEval, backEval,
-                        tierSum: (backEval
+                        tierSum: (backEval.cat * 2) + (midEval.cat * 2) + (frontEval.cat * 3) 
+                    });
+                }
+            }
+            
+            validHands.sort((a,b) => {
+                if (b.tierSum !== a.tierSum) return b.tierSum - a.tierSum;
+                if (b.frontEval.score !== a.frontEval.score) return b.frontEval.score - a.frontEval.score;
+                if (b.midEval.score !== a.midEval.score) return b.midEval.score - a.midEval.score;
+                return b.backEval.score - a.backEval.score;
+            });
+            
+            return validHands.slice(0, 5);
+        }
+
+        function sortForDisplay(cards) {
+            return [...cards].sort((a,b) => b.r - a.r);
+        }
+
+        // 5. Rendering
+        function renderResults(results, isNatural) {
+            const container = document.getElementById('results-container');
+            container.innerHTML = '';
+            
+            if (results.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:red; font-weight:bold;">No valid combinations found (Foul Hand)!</p>';
+                return;
+            }
+
+            results.forEach((res, index) => {
+                const headerText = isNatural ? "Unsorted Cards (Natural Hand)" : `Option ${index + 1}`;
+                const html = `
+                    <div class="result-card">
+                        <div class="result-header">
+                            <span>${headerText}</span>
+                        </div>
+                        <div class="hand-row">
+                            <span class="hand-name">Front</span>
+                            <div class="mini-cards">${renderMiniCards(res.front)}</div>
+                            <span class="hand-desc">${res.frontEval.name}</span>
+                        </div>
+                        <div class="hand-row">
+                            <span class="hand-name">Middle</span>
+                            <div class="mini-cards">${renderMiniCards(res.mid)}</div>
+                            <span class="hand-desc">${res.midEval.name}</span>
+                        </div>
+                        <div class="hand-row">
+                            <span class="hand-name">Back</span>
+                            <div class="mini-cards">${renderMiniCards(res.back)}</div>
+                            <span class="hand-desc">${res.backEval.name}</span>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        function renderMiniCards(cards) {
+            return cards.map(c => `
+                <div class="mini-card ${c.color}">
+                    <span>${c.display}</span>
+                    <span style="font-size:10px">${c.symbol}</span>
+                </div>
+            `).join('');
+        }
+
+        // Init
+        buildDeck();
+    </script>
+</body>
+</html>
