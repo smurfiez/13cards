@@ -15,6 +15,7 @@
             --red-suit: #ef4444;
             --black-suit: #111827;
             --success: #10b981;
+            --gold: #f59e0b;
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: var(--bg); color: var(--text); padding: 16px; margin: 0; max-width: 700px; margin: 0 auto; }
@@ -63,6 +64,8 @@
         }
 
         #loading { text-align: center; font-weight: bold; color: var(--primary); display: none; padding: 20px; }
+        
+        .natural-banner { background: var(--gold); color: white; padding: 16px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 16px; display: none; }
     </style>
 </head>
 <body>
@@ -82,6 +85,7 @@
 
     <div class="section" id="results-section" style="display: none;">
         <h2>Top Recommended Sets</h2>
+        <div id="natural-banner" class="natural-banner"></div>
         <div id="loading">Calculating 72,072 combinations...</div>
         <div id="results-container"></div>
     </div>
@@ -168,7 +172,44 @@
             }
         }
 
-        // 2. Core Evaluator Logic
+        // 2. Naturals Evaluator
+        function checkNaturals(cards) {
+            let rankCounts = {};
+            let suitCounts = { 's': 0, 'h': 0, 'c': 0, 'd': 0 };
+            let colors = { black: 0, red: 0 };
+
+            cards.forEach(c => {
+                rankCounts[c.r] = (rankCounts[c.r] || 0) + 1;
+                suitCounts[c.s]++;
+                if (c.s === 's' || c.s === 'c') colors.black++;
+                else colors.red++;
+            });
+
+            const rCounts = Object.values(rankCounts);
+            const sCounts = Object.values(suitCounts).filter(v => v > 0).sort((a, b) => b - a);
+
+            // Dragon (13 unique ranks)
+            if (rCounts.length === 13) return { isNatural: true, name: "Dragon (13 Unique Cards)" };
+
+            // All One Color
+            if (colors.black === 13 || colors.red === 13) return { isNatural: true, name: "All One Color" };
+
+            // Three Quads
+            if (rCounts.filter(c => c === 4).length === 3) return { isNatural: true, name: "Three Quads" };
+
+            // Six Pairs (4-of-a-kind counts as 2 pairs)
+            let pairs = 0;
+            rCounts.forEach(count => { pairs += Math.floor(count / 2); });
+            if (pairs === 6) return { isNatural: true, name: "Six Pairs" };
+
+            // Three Flushes (Suit counts must be exactly partitionable into 5, 5, 3)
+            const sProfile = sCounts.join(',');
+            if (['13', '10,3', '8,5', '5,5,3'].includes(sProfile)) return { isNatural: true, name: "Three Flushes" };
+
+            return { isNatural: false };
+        }
+
+        // 3. Core Combinatorics Evaluator Logic
         function eval5(cards) {
             let counts = {};
             let suitCounts = {};
@@ -255,17 +296,38 @@
             return results;
         }
 
-        // 3. Solving Execution
+        // 4. Solving Execution
         function startSolving() {
             document.getElementById('results-section').style.display = 'block';
             document.getElementById('results-container').innerHTML = '';
-            document.getElementById('loading').style.display = 'block';
+            document.getElementById('natural-banner').style.display = 'none';
             document.getElementById('solve-btn').disabled = true;
             
-            // Allow UI to update before blocking thread with calculation
+            // 1. Check for Naturals First
+            const naturalStatus = checkNaturals(selectedCards);
+            if (naturalStatus.isNatural) {
+                const banner = document.getElementById('natural-banner');
+                banner.textContent = `🏆 Instant Win Detected: ${naturalStatus.name}! 🏆`;
+                banner.style.display = 'block';
+                document.getElementById('solve-btn').disabled = false;
+                
+                // Show raw hand, skip permutations
+                renderResults([{
+                    front: sortForDisplay(selectedCards.slice(0,3)),
+                    mid: sortForDisplay(selectedCards.slice(3,8)),
+                    back: sortForDisplay(selectedCards.slice(8,13)),
+                    frontEval: {name: "Any"}, midEval: {name: "Any"}, backEval: {name: "Any"}
+                }], true);
+                
+                return;
+            }
+
+            // 2. Normal Hand Solving
+            document.getElementById('loading').style.display = 'block';
+            
             setTimeout(() => {
                 const results = solveHands(selectedCards);
-                renderResults(results);
+                renderResults(results, false);
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('solve-btn').disabled = false;
             }, 100);
@@ -274,104 +336,26 @@
         function solveHands(cards) {
             let validHands = [];
             
-            // Choose 5 for back (1287 combinations)
             let backCombs = getCombinations(cards, 5);
             for(let i=0; i<backCombs.length; i++) {
                 let back = backCombs[i];
                 let backEval = eval5(back);
                 
-                // Get remaining 8 cards
                 let rem8 = cards.filter(c => !back.includes(c));
-                
-                // Choose 5 for mid (56 combinations)
                 let midCombs = getCombinations(rem8, 5);
+                
                 for(let j=0; j<midCombs.length; j++) {
                     let mid = midCombs[j];
                     let midEval = eval5(mid);
                     
-                    // Rule Check: Back must beat or tie Middle
                     if(midEval.score > backEval.score) continue; 
                     
-                    // Remaining 3 for front
                     let front = rem8.filter(c => !mid.includes(c));
                     let frontEval = eval3(front);
                     
-                    // Rule Check: Middle must beat or tie Front
                     if(frontEval.score > midEval.score) continue; 
                     
-                    // Valid!
                     validHands.push({
                         front: sortForDisplay(front), mid: sortForDisplay(mid), back: sortForDisplay(back),
                         frontEval, midEval, backEval,
-                        // Priority Heuristic: Maximize total category strength, favoring powerful front hands
-                        tierSum: (backEval.cat * 2) + (midEval.cat * 2) + (frontEval.cat * 3) 
-                    });
-                }
-            }
-            
-            // Sort to find the "Best" hands
-            validHands.sort((a,b) => {
-                if (b.tierSum !== a.tierSum) return b.tierSum - a.tierSum;
-                if (b.frontEval.score !== a.frontEval.score) return b.frontEval.score - a.frontEval.score;
-                if (b.midEval.score !== a.midEval.score) return b.midEval.score - a.midEval.score;
-                return b.backEval.score - a.backEval.score;
-            });
-            
-            return validHands.slice(0, 5);
-        }
-
-        function sortForDisplay(cards) {
-            return [...cards].sort((a,b) => b.r - a.r);
-        }
-
-        // 4. Rendering
-        function renderResults(results) {
-            const container = document.getElementById('results-container');
-            container.innerHTML = '';
-            
-            if (results.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:red; font-weight:bold;">No valid combinations found (Foul Hand)!</p>';
-                return;
-            }
-
-            results.forEach((res, index) => {
-                const html = `
-                    <div class="result-card">
-                        <div class="result-header">
-                            <span>Option ${index + 1}</span>
-                        </div>
-                        <div class="hand-row">
-                            <span class="hand-name">Front</span>
-                            <div class="mini-cards">${renderMiniCards(res.front)}</div>
-                            <span class="hand-desc">${res.frontEval.name}</span>
-                        </div>
-                        <div class="hand-row">
-                            <span class="hand-name">Middle</span>
-                            <div class="mini-cards">${renderMiniCards(res.mid)}</div>
-                            <span class="hand-desc">${res.midEval.name}</span>
-                        </div>
-                        <div class="hand-row">
-                            <span class="hand-name">Back</span>
-                            <div class="mini-cards">${renderMiniCards(res.back)}</div>
-                            <span class="hand-desc">${res.backEval.name}</span>
-                        </div>
-                    </div>
-                `;
-                container.innerHTML += html;
-            });
-        }
-
-        function renderMiniCards(cards) {
-            return cards.map(c => `
-                <div class="mini-card ${c.color}">
-                    <span>${c.display}</span>
-                    <span style="font-size:10px">${c.symbol}</span>
-                </div>
-            `).join('');
-        }
-
-        // Init
-        buildDeck();
-    </script>
-</body>
-</html>
+                        tierSum: (backEval
