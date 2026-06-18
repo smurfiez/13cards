@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#f3f4f6">
+    <title>Payouts — 13 Cards</title>
+    <style>
+        :root {
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --primary: #2563eb;
+            --text: #1f2937;
+            --border: #d1d5db;
+            --success: #10b981;
+            --gold: #f59e0b;
+            --danger: #ef4444;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            background: var(--bg); color: var(--text); margin: 0;
+            padding: calc(12px + var(--safe-top)) 16px calc(20px + var(--safe-bottom));
+            max-width: 900px; margin-inline: auto; min-height: 100dvh;
+        }
+        h1, h2 { text-align: center; color: var(--primary); margin: 0 0 6px; }
+        h1 { font-size: 1.5rem; letter-spacing: -0.02em; }
+        h2 { font-size: 1rem; text-align: left; margin: 0 0 10px; }
+        p.subtitle { text-align: center; color: #6b7280; font-size: 0.875rem; margin: 0 0 16px; line-height: 1.4; }
+
+        .top-nav {
+            display: flex; justify-content: center; gap: 8px; margin-bottom: 16px;
+        }
+        .top-nav a {
+            padding: 10px 18px; border-radius: 10px; font-size: 0.875rem; font-weight: 700;
+            text-decoration: none; color: #6b7280; background: white; border: 1px solid var(--border);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .top-nav a.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .section {
+            background: var(--card-bg); padding: 14px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 16px; border: 1px solid var(--border);
+        }
+
+        .variant-segment {
+            display: flex; background: #e5e7eb; border-radius: 10px; padding: 3px; margin-bottom: 4px;
+        }
+        .variant-segment label { flex: 1; position: relative; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .variant-segment input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .variant-segment span {
+            display: block; text-align: center; padding: 10px 6px;
+            font-size: 0.8125rem; font-weight: 600; color: #6b7280; border-radius: 8px;
+            transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+        }
+        .variant-segment input:checked + span {
+            background: white; color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+
+        .note {
+            font-size: 0.8125rem; color: #6b7280; line-height: 1.45; margin: 12px 0 0;
+            padding: 10px 12px; background: #f9fafb; border-radius: 8px; border: 1px solid var(--border);
+        }
+
+        .payout-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        .payout-table th, .payout-table td {
+            padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border);
+        }
+        .payout-table th {
+            font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em;
+            color: #6b7280; font-weight: 800;
+        }
+        .payout-table tr:last-child td { border-bottom: none; }
+        .payout-val {
+            text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
+        }
+        .payout-val.pos { color: var(--gold); }
+        .payout-val.neg { color: var(--danger); }
+        .payout-val.nat { color: var(--success); }
+
+        .row-tag {
+            display: inline-block; font-size: 0.625rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.04em; padding: 2px 6px; border-radius: 4px; margin-right: 6px;
+            background: #dbeafe; color: #1d4ed8;
+        }
+        .row-tag.middle { background: #fef3c7; color: #b45309; }
+        .row-tag.back { background: #d1fae5; color: #047857; }
+
+        #payout-content { display: flex; flex-direction: column; gap: 16px; }
+
+        @media (min-width: 600px) {
+            body { padding: 20px 20px 32px; }
+            h1 { font-size: 1.75rem; }
+            .section { padding: 20px; }
+            .variant-segment { max-width: 400px; margin-inline: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="top-nav">
+        <a href="index.html">Solver</a>
+        <a href="payouts.html" class="active">Payouts</a>
+    </nav>
+
+    <h1>Payout Reference</h1>
+    <p class="subtitle">Royalties, naturals &amp; ace bonuses by variant</p>
+
+    <div class="section">
+        <div class="variant-segment" role="radiogroup" aria-label="Game variant">
+            <label>
+                <input type="radio" name="variant" value="traditional_chinese_poker" checked>
+                <span>China</span>
+            </label>
+            <label>
+                <input type="radio" name="variant" value="vietnamese_mau_binh">
+                <span>Vietnam</span>
+            </label>
+        </div>
+        <div id="payout-content"></div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        function formatPayout(n) {
+            if (n > 0) return `+${n}`;
+            if (n < 0) return `${n}`;
+            return '0';
+        }
+
+        function labelize(key) {
+            return (ROYALTY_LABELS[key] || NATURAL_LABELS[key] || ACE_LABELS[key] || key.replace(/_/g, ' '));
+        }
+
+        function renderTable(title, rows) {
+            if (!rows.length) return '';
+            const body = rows.map(([label, val, cls]) => {
+                const valClass = cls || (val > 0 ? 'pos' : val < 0 ? 'neg' : '');
+                return `<tr><td>${label}</td><td class="payout-val ${valClass}">${formatPayout(val)}</td></tr>`;
+            }).join('');
+            return `
+                <div>
+                    <h2>${title}</h2>
+                    <table class="payout-table">
+                        <thead><tr><th>Hand</th><th style="text-align:right">Units</th></tr></thead>
+                        <tbody>${body}</tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderRoyalties(variant) {
+            const rb = config[variant].royalties_bonuses;
+            const rows = [];
+            const tags = { front_3_cards: '', middle_5_cards: 'middle', back_5_cards: 'back' };
+            Object.entries(rb).forEach(([row, hands]) => {
+                Object.entries(hands).forEach(([key, val]) => {
+                    const tag = tags[row];
+                    const tagClass = tag ? `row-tag ${tag}` : 'row-tag';
+                    const rowName = ROW_LABELS[row].split(' ')[0];
+                    rows.push([`<span class="${tagClass}">${rowName}</span>${labelize(key)}`, val]);
+                });
+            });
+            return renderTable('Royalties', rows);
+        }
+
+        function renderNaturals(variant) {
+            const rows = Object.entries(config[variant].naturals_automatic_wins)
+                .map(([key, val]) => [labelize(key), val, 'nat']);
+            return renderTable('Naturals (Automatic Wins)', rows);
+        }
+
+        function renderAces(variant) {
+            const ap = config[variant].ace_payouts;
+            if (!ap) return '';
+            const rows = Object.entries(ap).map(([key, val]) => [labelize(key), val]);
+            return renderTable('Ace Bonuses', rows);
+        }
+
+        function render() {
+            const variant = document.querySelector('input[name=variant]:checked').value;
+            const isChina = variant === 'traditional_chinese_poker';
+            const container = document.getElementById('payout-content');
+            container.innerHTML =
+                renderRoyalties(variant) +
+                renderNaturals(variant) +
+                renderAces(variant) +
+                `<p class="note">${isChina
+                    ? 'Traditional Chinese Poker: middle-row royalties are double the back-row values for the same hand (e.g. quads +8 middle vs +4 back).'
+                    : 'Vietnamese Mậu Binh: ace bonuses apply on top of royalties and naturals. Three aces in the front hand pays more than three aces elsewhere.'}</p>`;
+        }
+
+        document.querySelectorAll('input[name=variant]').forEach(r => r.addEventListener('change', render));
+        render();
+    </script>
+</body>
+</html>

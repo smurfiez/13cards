@@ -176,6 +176,16 @@
 
         .results-note { text-align: center; color: #6b7280; font-size: 0.8125rem; margin: 0; line-height: 1.4; }
 
+        .top-nav {
+            display: flex; justify-content: center; gap: 8px; margin-bottom: 16px;
+        }
+        .top-nav a {
+            padding: 10px 18px; border-radius: 10px; font-size: 0.875rem; font-weight: 700;
+            text-decoration: none; color: #6b7280; background: white; border: 1px solid var(--border);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .top-nav a.active { background: var(--primary); color: white; border-color: var(--primary); }
+
         #loading { text-align: center; font-weight: 700; color: var(--primary); display: none; padding: 24px; }
 
         @media (min-width: 600px) {
@@ -216,6 +226,11 @@
 </head>
 <body>
 
+    <nav class="top-nav">
+        <a href="index.html" class="active">Solver</a>
+        <a href="payouts.html">Payouts</a>
+    </nav>
+
     <h1>13 Cards Solver</h1>
     <p class="subtitle">Select 13 cards — auto-detects royalties &amp; naturals</p>
 
@@ -245,6 +260,7 @@
         <div id="results-container"></div>
     </div>
 
+    <script src="config.js"></script>
     <script>
         const suits = [
             { id: 's', symbol: '♠', color: 'card-black' },
@@ -254,47 +270,6 @@
         ];
         const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
         const catNames = ['High Card', 'Pair', 'Two Pair', 'Three of a Kind', 'Straight', 'Flush', 'Full House', 'Four of a Kind', 'Straight Flush'];
-
-        const config = {
-            traditional_chinese_poker: {
-                royalties_bonuses: {
-                    front_3_cards: { three_of_a_kind: 3 },
-                    middle_5_cards: { full_house: 2, four_of_a_kind: 8, straight_flush: 10 },
-                    back_5_cards: { four_of_a_kind: 4, straight_flush: 5 }
-                },
-                naturals_automatic_wins: {
-                    dragon: 13, clean_dragon: 39, all_colors: 10,
-                    six_pairs: 3, three_flushes: 3, three_straights: 3
-                }
-            },
-            vietnamese_mau_binh: {
-                royalties_bonuses: {
-                    front_3_cards: { three_of_a_kind: 3 },
-                    middle_5_cards: { full_house: 2, four_of_a_kind: 8, straight_flush: 10 },
-                    back_5_cards: { four_of_a_kind: 4, straight_flush: 5 }
-                },
-                ace_payouts: {
-                    no_aces_penalty: -4, two_aces: 4, three_aces: 8,
-                    three_aces_front_hand: 12, four_aces: 16
-                },
-                naturals_automatic_wins: {
-                    dragon_same_suit: 24, dragon_mixed_suit: 12, five_pairs_one_trips: 6,
-                    six_pairs: 3, three_flushes: 3, three_straights: 3
-                }
-            }
-        };
-
-        const NATURAL_LABELS = {
-            dragon: 'Dragon', clean_dragon: 'Clean Dragon', all_colors: 'All Colors',
-            six_pairs: 'Six Pairs', three_flushes: 'Three Flushes', three_straights: 'Three Straights',
-            dragon_same_suit: 'Dragon (Same Suit)', dragon_mixed_suit: 'Dragon (Mixed Suit)',
-            five_pairs_one_trips: 'Five Pairs + One Trips'
-        };
-
-        const ROYALTY_LABELS = {
-            three_of_a_kind: 'Three of a Kind', full_house: 'Full House',
-            four_of_a_kind: 'Four of a Kind', straight_flush: 'Straight Flush'
-        };
 
         let selectedCards = [];
         let lastResults = null;
@@ -460,15 +435,15 @@
             const entries = Object.entries(counts).map(([r, n]) => [+r, n]).sort((a, b) => b[0] - a[0]);
             if (entries.some(([, n]) => n === 3)) {
                 const trip = entries.find(([, n]) => n === 3)[0];
-                return { cat: 2, name: 'Three of a Kind', kickers: [trip], score: 2000000 + trip };
+                return { cat: 2, name: 'Three of a Kind', kickers: [trip] };
             }
             if (entries.some(([, n]) => n === 2)) {
                 const pair = entries.find(([, n]) => n === 2)[0];
                 const kicker = entries.find(([, n]) => n === 1)[0];
-                return { cat: 1, name: 'Pair', kickers: [pair, kicker], score: 1000000 + pair * 100 + kicker };
+                return { cat: 1, name: 'Pair', kickers: [pair, kicker] };
             }
             const ks = sortedRanksDesc(cards);
-            return { cat: 0, name: 'High Card', kickers: ks, score: ks[0] * 10000 + ks[1] * 100 + ks[2] };
+            return { cat: 0, name: 'High Card', kickers: ks };
         }
 
         function evalFive(cards) {
@@ -479,24 +454,85 @@
             const sh = straightHigh(cards);
             const sf = flush && sh !== null;
 
-            if (sf) return { cat: 8, name: 'Straight Flush', kickers: [sh], score: 80000000 + sh };
-            if (byCount[0].n === 4) return { cat: 7, name: 'Four of a Kind', kickers: [byCount[0].r, byCount[1].r], score: 70000000 + byCount[0].r * 100 + byCount[1].r };
-            if (byCount[0].n === 3 && byCount[1].n === 2) return { cat: 6, name: 'Full House', kickers: [byCount[0].r, byCount[1].r], score: 60000000 + byCount[0].r * 100 + byCount[1].r };
-            if (flush) return { cat: 5, name: 'Flush', kickers: ranks, score: 50000000 + ranks[0] };
-            if (sh !== null) return { cat: 4, name: 'Straight', kickers: [sh], score: 40000000 + sh };
-            if (byCount[0].n === 3) return { cat: 3, name: 'Three of a Kind', kickers: [byCount[0].r, ...ranks.filter(r => r !== byCount[0].r)], score: 30000000 + byCount[0].r * 10000 };
+            if (sf) return { cat: 8, name: 'Straight Flush', kickers: [sh] };
+            if (byCount[0].n === 4) {
+                const quad = byCount[0].r, kicker = byCount[1].r;
+                return { cat: 7, name: 'Four of a Kind', kickers: [quad, kicker] };
+            }
+            if (byCount[0].n === 3 && byCount[1].n === 2) {
+                return { cat: 6, name: 'Full House', kickers: [byCount[0].r, byCount[1].r] };
+            }
+            if (flush) return { cat: 5, name: 'Flush', kickers: ranks };
+            if (sh !== null) return { cat: 4, name: 'Straight', kickers: [sh] };
+            if (byCount[0].n === 3) {
+                const trip = byCount[0].r;
+                const kickers = ranks.filter(r => r !== trip);
+                return { cat: 3, name: 'Three of a Kind', kickers: [trip, ...kickers] };
+            }
             if (byCount[0].n === 2 && byCount[1].n === 2) {
                 const hi = Math.max(byCount[0].r, byCount[1].r), lo = Math.min(byCount[0].r, byCount[1].r);
                 const k = byCount.find(x => x.n === 1).r;
-                return { cat: 2, name: 'Two Pair', kickers: [hi, lo, k], score: 20000000 + hi * 10000 + lo * 100 + k };
+                return { cat: 2, name: 'Two Pair', kickers: [hi, lo, k] };
             }
-            if (byCount[0].n === 2) return { cat: 1, name: 'Pair', kickers: [byCount[0].r, ...ranks.filter(r => r !== byCount[0].r)], score: 10000000 + byCount[0].r * 10000 };
-            return { cat: 0, name: 'High Card', kickers: ranks, score: ranks[0] * 1000000 + ranks[1] * 10000 };
+            if (byCount[0].n === 2) {
+                const pair = byCount[0].r;
+                const kickers = ranks.filter(r => r !== pair);
+                return { cat: 1, name: 'Pair', kickers: [pair, ...kickers] };
+            }
+            return { cat: 0, name: 'High Card', kickers: ranks };
+        }
+
+        function compareEval(a, b) {
+            if (a.cat !== b.cat) return a.cat - b.cat;
+            const len = Math.max(a.kickers.length, b.kickers.length);
+            for (let i = 0; i < len; i++) {
+                const av = a.kickers[i] || 0, bv = b.kickers[i] || 0;
+                if (av !== bv) return av - bv;
+            }
+            return 0;
+        }
+
+        /** 5-card vs 5-card: positive if handA wins */
+        function beatsFive(handA, handB) {
+            return compareEval(evalFive(handA), evalFive(handB)) > 0;
+        }
+
+        /**
+         * Chinese poker foul rule: middle must beat front.
+         * Cross-size comparison — e.g. front pair needs middle pair+ with higher kickers,
+         * front trips only allows middle high card or two-pair+ (not a lone pair).
+         */
+        function beatsFront(middle, front) {
+            const m = evalFive(middle);
+            const f = evalFront(front);
+
+            if (f.cat === 2) {
+                if (m.cat === 1) return false;
+                return true;
+            }
+            if (f.cat === 1) {
+                if (m.cat === 0) return false;
+                if (m.cat > 1) return true;
+                return compareEval(m, { cat: 1, kickers: f.kickers }) > 0;
+            }
+            if (m.cat >= 1) return true;
+            return compareEval(m, f) > 0;
         }
 
         function isValidArrangement(front, middle, back) {
-            const f = evalFront(front), m = evalFive(middle), b = evalFive(back);
-            return b.score > m.score && m.score > f.score;
+            return beatsFive(back, middle) && beatsFront(middle, front);
+        }
+
+        function evalToNumber(e) {
+            let n = e.cat;
+            for (const k of e.kickers) n = n * 100 + k;
+            return n;
+        }
+
+        function handStrengthScore(front, middle, back) {
+            return evalToNumber(evalFive(back)) * 1e12
+                + evalToNumber(evalFive(middle)) * 1e6
+                + evalToNumber(evalFront(front));
         }
 
         // --- Royalties ---
@@ -627,7 +663,7 @@
                     const ace = getAcePayout(front, cards, variant);
                     const royaltyTotal = royalties.total;
                     const totalPayout = royaltyTotal + ace.payout;
-                    const strength = backEval.score + midEval.score * 0.001 + frontEval.score * 0.000001;
+                    const strength = handStrengthScore(front, middle, back);
 
                     valid.push({
                         front, middle, back,
