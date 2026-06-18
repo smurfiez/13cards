@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#f3f4f6">
     <title>13 Cards Best Hand Solver</title>
     <style>
         :root {
@@ -16,77 +19,229 @@
             --black-suit: #111827;
             --success: #10b981;
             --gold: #f59e0b;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --dock-h: 72px;
+            --picker-card-w: 50px;
+            --picker-card-h: 72px;
         }
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: var(--bg); color: var(--text); padding: 16px; margin: 0; max-width: 700px; margin: 0 auto; }
-        h1, h2 { text-align: center; color: var(--primary); margin-bottom: 8px; }
-        p.subtitle { text-align: center; color: #6b7280; font-size: 14px; margin-top: -4px; margin-bottom: 24px; }
-        
-        .section { background: var(--card-bg); padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid var(--border); }
-        
-        /* Card Picker Grid */
-        .suit-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; justify-content: center; }
-        .card-btn { 
-            width: 40px; height: 56px; border: 1px solid var(--border); border-radius: 6px; 
-            background: white; font-weight: bold; font-size: 16px; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; cursor: pointer; transition: 0.1s;
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            background-color: var(--bg); color: var(--text); margin: 0;
+            padding: calc(12px + var(--safe-top)) 16px calc(var(--dock-h) + var(--safe-bottom) + 16px);
+            max-width: 900px; margin-inline: auto;
+            min-height: 100dvh;
         }
-        .card-btn:hover { background: #f9fafb; }
-        .card-btn.selected { background: var(--primary); color: white !important; border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }
+        h1, h2 { text-align: center; color: var(--primary); margin: 0 0 6px; }
+        h1 { font-size: 1.5rem; letter-spacing: -0.02em; }
+        h2 { font-size: 1.2rem; }
+        p.subtitle { text-align: center; color: #6b7280; font-size: 0.875rem; margin: 0 0 16px; line-height: 1.4; }
+
+        .section {
+            background: var(--card-bg); padding: 14px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 16px; border: 1px solid var(--border);
+        }
+
+        /* iOS-style segmented control */
+        .variant-segment {
+            display: flex; background: #e5e7eb; border-radius: 10px; padding: 3px;
+            margin-bottom: 14px;
+        }
+        .variant-segment label {
+            flex: 1; position: relative; cursor: pointer; -webkit-tap-highlight-color: transparent;
+        }
+        .variant-segment input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .variant-segment span {
+            display: block; text-align: center; padding: 10px 6px;
+            font-size: 0.8125rem; font-weight: 600; color: #6b7280;
+            border-radius: 8px; transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+        }
+        .variant-segment input:checked + span {
+            background: white; color: var(--text);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+
+        /* Suit rows: horizontal scroll on phone */
+        .suit-row { display: flex; align-items: stretch; gap: 8px; margin-bottom: 8px; }
+        .suit-label {
+            flex: 0 0 32px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.375rem; font-weight: 700; padding-top: 4px;
+        }
+        .suit-scroll {
+            display: flex; gap: 6px; overflow-x: auto; flex: 1; min-width: 0;
+            scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+            padding: 2px 2px 6px; scrollbar-width: none;
+        }
+        .suit-scroll::-webkit-scrollbar { display: none; }
+
+        .card-btn {
+            flex: 0 0 var(--picker-card-w); width: var(--picker-card-w); height: var(--picker-card-h);
+            border: 1.5px solid var(--border); border-radius: 10px;
+            background: white; font-weight: 700; font-size: 1.0625rem;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; touch-action: manipulation; scroll-snap-align: start;
+            -webkit-tap-highlight-color: transparent; user-select: none;
+            transition: transform 0.1s, box-shadow 0.1s, background 0.1s;
+        }
+        .card-btn:active { transform: scale(0.94); }
+        .card-btn.selected {
+            background: var(--primary); color: white !important; border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+        }
+        .card-btn .suit-sm { font-size: 0.75rem; line-height: 1; margin-top: 2px; }
         .card-red { color: var(--red-suit); }
         .card-black { color: var(--black-suit); }
 
-        /* Actions */
-        .status-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
-        .count { font-weight: bold; font-size: 16px; }
-        .count.ready { color: var(--success); }
-        
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; }
-        .btn-primary { background: var(--primary); }
-        .btn-primary:hover { background: var(--primary-hover); }
-        .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none; }
-        .btn-clear { background: #6b7280; }
-        .btn-clear:hover { background: #4b5563; }
+        /* Sticky bottom action dock */
+        .action-dock {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 16px calc(10px + var(--safe-bottom));
+            background: rgba(255,255,255,0.88);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(0,0,0,0.08);
+        }
+        .count {
+            flex: 1; text-align: center; font-weight: 700; font-size: 1rem;
+            padding: 10px 12px; border-radius: 10px; background: #f3f4f6;
+        }
+        .count.ready { background: #d1fae5; color: #047857; }
 
-        /* Results */
-        #results-container { display: flex; flex-direction: column; gap: 16px; }
-        .result-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-        .result-header { background: #f9fafb; padding: 10px 16px; font-weight: bold; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;}
-        .hand-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+        .btn {
+            padding: 14px 18px; border: none; border-radius: 12px;
+            font-size: 1rem; font-weight: 700; cursor: pointer; color: white;
+            touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+            min-height: 48px; white-space: nowrap;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: var(--primary); flex: 1.2; }
+        .btn-primary:disabled { background: #9ca3af; transform: none; }
+        .btn-clear { background: #6b7280; flex: 0.8; padding-inline: 14px; }
+
+        #results-container { display: flex; flex-direction: column; gap: 14px; }
+
+        .natural-banner {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid var(--gold); padding: 14px; border-radius: 12px;
+            text-align: center; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+        }
+        .natural-banner.royalty { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-color: var(--primary); }
+        .natural-banner h3 { margin: 0 0 4px; color: #b45309; text-transform: uppercase; font-size: 0.9375rem; letter-spacing: 0.03em; }
+        .natural-banner.royalty h3 { color: #1d4ed8; }
+        .natural-banner p { margin: 0; color: #92400e; font-weight: 600; font-size: 0.8125rem; line-height: 1.45; }
+        .natural-banner.royalty p { color: #1e40af; }
+
+        .result-card { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+        .result-header {
+            background: #f9fafb; padding: 12px 16px; font-weight: 700; font-size: 0.9375rem;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center; gap: 8px;
+        }
+        .result-total { color: var(--success); font-size: 1rem; font-variant-numeric: tabular-nums; }
+
+        /* Hand rows: stacked on phone, inline on desktop */
+        .hand-row {
+            display: grid; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border);
+            grid-template-columns: 1fr auto;
+            grid-template-areas: "name payout" "cards cards" "desc desc";
+        }
         .hand-row:last-child { border-bottom: none; }
-        .hand-name { font-size: 12px; font-weight: bold; color: #6b7280; text-transform: uppercase; width: 60px; }
-        .hand-desc { font-size: 13px; font-weight: bold; text-align: right; color: var(--primary); flex: 1; }
-        .mini-cards { display: flex; gap: 4px; flex: 2; justify-content: center; }
-        .mini-card { 
-            width: 32px; height: 44px; border: 1px solid var(--border); border-radius: 4px; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            font-size: 12px; font-weight: bold; background: white;
+        .hand-row.has-royalty { background: #fffbeb; }
+        .hand-name { grid-area: name; font-size: 0.6875rem; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; align-self: center; }
+        .hand-payout { grid-area: payout; font-size: 1rem; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+        .hand-payout.zero { color: #9ca3af; font-weight: 600; }
+        .mini-cards {
+            grid-area: cards; display: flex; gap: 6px;
+            overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+            scrollbar-width: none; padding-bottom: 2px;
+        }
+        .mini-cards::-webkit-scrollbar { display: none; }
+        .mini-card {
+            flex: 0 0 44px; width: 44px; height: 58px;
+            border: 1.5px solid var(--border); border-radius: 8px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 0.8125rem; font-weight: 700; background: white;
+        }
+        .mini-card .suit-sm { font-size: 0.625rem; line-height: 1; }
+        .mini-card.card-red { color: var(--red-suit); }
+        .mini-card.card-black { color: var(--black-suit); }
+        .hand-desc { grid-area: desc; font-size: 0.875rem; font-weight: 600; color: var(--primary); line-height: 1.3; }
+
+        .ace-row {
+            padding: 10px 16px; background: #f0fdf4; border-top: 1px solid var(--border);
+            font-size: 0.875rem; display: flex; justify-content: space-between; align-items: center;
         }
 
-        #loading { text-align: center; font-weight: bold; color: var(--primary); display: none; padding: 20px; }
-        
-        .natural-banner { background: var(--gold); color: white; padding: 16px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 16px; display: none; }
+        .results-note { text-align: center; color: #6b7280; font-size: 0.8125rem; margin: 0; line-height: 1.4; }
+
+        #loading { text-align: center; font-weight: 700; color: var(--primary); display: none; padding: 24px; }
+
+        @media (min-width: 600px) {
+            :root { --picker-card-w: 44px; --picker-card-h: 64px; --dock-h: 0px; }
+            body { padding: 20px 20px 32px; }
+            h1 { font-size: 1.75rem; }
+            .section { padding: 20px; border-radius: 12px; }
+            .variant-segment { max-width: 400px; margin-inline: auto; margin-bottom: 20px; }
+            .suit-scroll { flex-wrap: wrap; overflow: visible; justify-content: center; }
+            .suit-row { flex-direction: column; align-items: center; margin-bottom: 10px; }
+            .suit-label { flex: none; padding: 0; }
+            .action-dock {
+                position: static; max-width: 900px; margin: 0 auto 24px;
+                background: var(--card-bg); backdrop-filter: none;
+                border: 1px solid var(--border); border-radius: 16px;
+                padding: 14px 16px;
+            }
+            .count { flex: none; background: transparent; padding: 0; }
+            .btn-primary { flex: none; }
+            .btn-clear { flex: none; }
+            .card-btn:hover { background: #f9fafb; }
+            .btn-primary:hover { background: var(--primary-hover); }
+            .btn-clear:hover { background: #4b5563; }
+            .hand-row {
+                grid-template-columns: 56px 1fr auto auto;
+                grid-template-areas: "name cards desc payout";
+                align-items: center; gap: 10px;
+            }
+            .hand-desc { text-align: right; }
+            .mini-cards { justify-content: center; overflow: visible; flex-wrap: wrap; }
+            .mini-card { flex: 0 0 36px; width: 36px; height: 48px; font-size: 0.75rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition-duration: 0.01ms !important; }
+        }
     </style>
 </head>
 <body>
 
     <h1>13 Cards Solver</h1>
-    <p class="subtitle">Select exactly 13 cards to find the best possible valid arrangements.</p>
+    <p class="subtitle">Select 13 cards — auto-detects royalties &amp; naturals</p>
 
     <div class="section">
-        <div id="deck-grid"></div>
-        
-        <div class="status-bar">
-            <button class="btn btn-clear" onclick="clearSelection()">Clear</button>
-            <div id="selection-count" class="count">0 / 13 Selected</div>
-            <button id="solve-btn" class="btn btn-primary" disabled onclick="startSolving()">Find Hands</button>
+        <div class="variant-segment" role="radiogroup" aria-label="Game variant">
+            <label>
+                <input type="radio" name="variant" value="traditional_chinese_poker" checked>
+                <span>China</span>
+            </label>
+            <label>
+                <input type="radio" name="variant" value="vietnamese_mau_binh">
+                <span>Vietnam</span>
+            </label>
         </div>
+        <div id="deck-grid"></div>
+    </div>
+
+    <div class="action-dock">
+        <button class="btn btn-clear" onclick="clearSelection()">Clear</button>
+        <div id="selection-count" class="count">0 / 13</div>
+        <button id="solve-btn" class="btn btn-primary" disabled onclick="startSolving()">Find Hands</button>
     </div>
 
     <div class="section" id="results-section" style="display: none;">
-        <h2>Top Recommended Sets</h2>
-        <div id="natural-banner" class="natural-banner"></div>
-        <div id="loading">Calculating 72,072 combinations...</div>
+        <h2>Results</h2>
+        <div id="loading">Calculating...</div>
         <div id="results-container"></div>
     </div>
 
@@ -98,24 +253,84 @@
             { id: 'd', symbol: '♦', color: 'card-red' }
         ];
         const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
-        const catNames = ["High Card", "Pair", "Two Pair", "Three of a Kind", "Straight", "Flush", "Full House", "Four of a Kind", "Straight Flush"];
-        
-        let selectedCards = [];
+        const catNames = ['High Card', 'Pair', 'Two Pair', 'Three of a Kind', 'Straight', 'Flush', 'Full House', 'Four of a Kind', 'Straight Flush'];
 
-        // 1. UI: Build Deck Grid
+        const config = {
+            traditional_chinese_poker: {
+                royalties_bonuses: {
+                    front_3_cards: { three_of_a_kind: 3 },
+                    middle_5_cards: { full_house: 2, four_of_a_kind: 8, straight_flush: 10 },
+                    back_5_cards: { four_of_a_kind: 4, straight_flush: 5 }
+                },
+                naturals_automatic_wins: {
+                    dragon: 13, clean_dragon: 39, all_colors: 10,
+                    six_pairs: 3, three_flushes: 3, three_straights: 3
+                }
+            },
+            vietnamese_mau_binh: {
+                royalties_bonuses: {
+                    front_3_cards: { three_of_a_kind: 3 },
+                    middle_5_cards: { full_house: 2, four_of_a_kind: 8, straight_flush: 10 },
+                    back_5_cards: { four_of_a_kind: 4, straight_flush: 5 }
+                },
+                ace_payouts: {
+                    no_aces_penalty: -4, two_aces: 4, three_aces: 8,
+                    three_aces_front_hand: 12, four_aces: 16
+                },
+                naturals_automatic_wins: {
+                    dragon_same_suit: 24, dragon_mixed_suit: 12, five_pairs_one_trips: 6,
+                    six_pairs: 3, three_flushes: 3, three_straights: 3
+                }
+            }
+        };
+
+        const NATURAL_LABELS = {
+            dragon: 'Dragon', clean_dragon: 'Clean Dragon', all_colors: 'All Colors',
+            six_pairs: 'Six Pairs', three_flushes: 'Three Flushes', three_straights: 'Three Straights',
+            dragon_same_suit: 'Dragon (Same Suit)', dragon_mixed_suit: 'Dragon (Mixed Suit)',
+            five_pairs_one_trips: 'Five Pairs + One Trips'
+        };
+
+        const ROYALTY_LABELS = {
+            three_of_a_kind: 'Three of a Kind', full_house: 'Full House',
+            four_of_a_kind: 'Four of a Kind', straight_flush: 'Straight Flush'
+        };
+
+        let selectedCards = [];
+        let lastResults = null;
+
+        function getVariant() {
+            return document.querySelector('input[name=variant]:checked').value;
+        }
+
         function buildDeck() {
             const grid = document.getElementById('deck-grid');
             grid.innerHTML = '';
             suits.forEach(suit => {
                 const row = document.createElement('div');
                 row.className = 'suit-row';
+
+                const label = document.createElement('div');
+                label.className = `suit-label ${suit.color}`;
+                label.textContent = suit.symbol;
+                label.setAttribute('aria-hidden', 'true');
+
+                const scroll = document.createElement('div');
+                scroll.className = 'suit-scroll';
+
                 ranks.forEach(rank => {
                     const btn = document.createElement('div');
                     btn.className = `card-btn ${suit.color}`;
-                    btn.innerHTML = `<span>${rank}</span><span style="font-size:12px">${suit.symbol}</span>`;
+                    btn.dataset.cardId = `${rank}${suit.id}`;
+                    btn.setAttribute('role', 'button');
+                    btn.setAttribute('aria-label', `${rank} of ${suit.symbol}`);
+                    btn.innerHTML = `<span>${rank}</span><span class="suit-sm">${suit.symbol}</span>`;
                     btn.onclick = () => toggleCard(rank, suit, btn);
-                    row.appendChild(btn);
+                    scroll.appendChild(btn);
                 });
+
+                row.appendChild(label);
+                row.appendChild(scroll);
                 grid.appendChild(row);
             });
         }
@@ -123,19 +338,14 @@
         function toggleCard(rank, suit, btnElement) {
             const cardId = `${rank}${suit.id}`;
             const index = selectedCards.findIndex(c => c.id === cardId);
-            
             if (index > -1) {
                 selectedCards.splice(index, 1);
                 btnElement.classList.remove('selected');
             } else {
-                if (selectedCards.length >= 13) return; // Max 13
-                selectedCards.push({ 
-                    id: cardId, 
-                    r: getCardValue(rank), 
-                    s: suit.id, 
-                    symbol: suit.symbol,
-                    display: rank,
-                    color: suit.color
+                if (selectedCards.length >= 13) return;
+                selectedCards.push({
+                    id: cardId, r: getCardValue(rank), s: suit.id,
+                    symbol: suit.symbol, display: rank, color: suit.color
                 });
                 btnElement.classList.add('selected');
             }
@@ -156,13 +366,13 @@
             document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
             updateStatus();
             document.getElementById('results-section').style.display = 'none';
+            lastResults = null;
         }
 
         function updateStatus() {
             const countEl = document.getElementById('selection-count');
             const solveBtn = document.getElementById('solve-btn');
-            countEl.textContent = `${selectedCards.length} / 13 Selected`;
-            
+            countEl.textContent = `${selectedCards.length} / 13`;
             if (selectedCards.length === 13) {
                 countEl.classList.add('ready');
                 solveBtn.disabled = false;
@@ -172,259 +382,368 @@
             }
         }
 
-        // 2. Naturals Evaluator
-        function checkNaturals(cards) {
-            let rankCounts = {};
-            let suitCounts = { 's': 0, 'h': 0, 'c': 0, 'd': 0 };
-            let colors = { black: 0, red: 0 };
-
-            cards.forEach(c => {
-                rankCounts[c.r] = (rankCounts[c.r] || 0) + 1;
-                suitCounts[c.s]++;
-                if (c.s === 's' || c.s === 'c') colors.black++;
-                else colors.red++;
+        document.querySelectorAll('input[name=variant]').forEach(r => {
+            r.addEventListener('change', () => {
+                if (lastResults && selectedCards.length === 13) startSolving();
             });
+        });
 
-            const rCounts = Object.values(rankCounts);
-            const sCounts = Object.values(suitCounts).filter(v => v > 0).sort((a, b) => b - a);
-
-            // Dragon (13 unique ranks)
-            if (rCounts.length === 13) return { isNatural: true, name: "Dragon (13 Unique Cards)" };
-
-            // All One Color
-            if (colors.black === 13 || colors.red === 13) return { isNatural: true, name: "All One Color" };
-
-            // Three Quads
-            if (rCounts.filter(c => c === 4).length === 3) return { isNatural: true, name: "Three Quads" };
-
-            // Six Pairs (4-of-a-kind counts as 2 pairs)
-            let pairs = 0;
-            rCounts.forEach(count => { pairs += Math.floor(count / 2); });
-            if (pairs === 6) return { isNatural: true, name: "Six Pairs" };
-
-            // Three Flushes (Suit counts must be exactly partitionable into 5, 5, 3)
-            const sProfile = sCounts.join(',');
-            if (['13', '10,3', '8,5', '5,5,3'].includes(sProfile)) return { isNatural: true, name: "Three Flushes" };
-
-            return { isNatural: false };
+        function startSolving() {
+            if (selectedCards.length !== 13) return;
+            document.getElementById('results-section').style.display = 'block';
+            document.getElementById('loading').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+                const variant = getVariant();
+                lastResults = solveHands(selectedCards, variant);
+                renderResults(lastResults, variant);
+                document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50);
         }
 
-        // 3. Core Combinatorics Evaluator Logic
-        function eval5(cards) {
-            let counts = {};
-            let suitCounts = {};
-            cards.forEach(c => {
-                counts[c.r] = (counts[c.r] || 0) + 1;
-                suitCounts[c.s] = (suitCounts[c.s] || 0) + 1;
-            });
-            
-            let isFlush = Object.keys(suitCounts).length === 1;
-            let groups = Object.entries(counts).map(([r, c]) => ({r: Number(r), c})).sort((a,b) => b.c - a.c || b.r - a.r);
-            let ranksOnly = groups.map(g => g.r);
-            
-            let isStraight = false;
-            let straightHigh = 0;
-            
-            if (ranksOnly.length === 5) {
-                if (ranksOnly[0] - ranksOnly[4] === 4) {
-                    isStraight = true;
-                    straightHigh = ranksOnly[0];
-                } else if (ranksOnly.join(',') === "14,5,4,3,2") {
-                    isStraight = true;
-                    straightHigh = 5;
-                }
-            }
-
-            let cat = 0;
-            if (isStraight && isFlush) cat = 8;
-            else if (groups[0].c === 4) cat = 7;
-            else if (groups[0].c === 3 && groups[1].c === 2) cat = 6;
-            else if (isFlush) cat = 5;
-            else if (isStraight) cat = 4;
-            else if (groups[0].c === 3) cat = 3;
-            else if (groups[0].c === 2 && groups[1].c === 2) cat = 2;
-            else if (groups[0].c === 2) cat = 1;
-
-            let score = cat * 10000000000;
-            if (cat === 4 || cat === 8) {
-                score += straightHigh * 100000000;
-            } else if (cat === 5 || cat === 0) {
-                let sortedFlushRanks = cards.map(c=>c.r).sort((a,b)=>b-a);
-                score += sortedFlushRanks[0]*100000000 + sortedFlushRanks[1]*1000000 + sortedFlushRanks[2]*10000 + sortedFlushRanks[3]*100 + sortedFlushRanks[4];
-            } else {
-                let multis = [100000000, 1000000, 10000, 100, 1];
-                for(let i=0; i<groups.length; i++){
-                    score += groups[i].r * multis[i];
-                }
-            }
-            return { score, cat, name: catNames[cat] };
-        }
-
-        function eval3(cards) {
-            let counts = {};
-            cards.forEach(c => {
-                counts[c.r] = (counts[c.r] || 0) + 1;
-            });
-            let groups = Object.entries(counts).map(([r, c]) => ({r: Number(r), c})).sort((a,b) => b.c - a.c || b.r - a.r);
-            
-            let cat = 0;
-            if (groups[0].c === 3) cat = 3;
-            else if (groups[0].c === 2) cat = 1;
-            
-            let score = cat * 10000000000;
-            let multis = [100000000, 1000000, 10000];
-            for(let i=0; i<groups.length; i++){
-                score += groups[i].r * multis[i];
-            }
-            return { score, cat, name: catNames[cat] };
-        }
-
-        function getCombinations(array, k) {
-            const results = [];
+        // --- Combinatorics ---
+        function combinations(arr, k) {
+            const res = [];
             function helper(start, combo) {
-                if (combo.length === k) {
-                    results.push([...combo]);
-                    return;
-                }
-                for (let i = start; i < array.length; i++) {
-                    combo.push(array[i]);
+                if (combo.length === k) { res.push(combo.slice()); return; }
+                for (let i = start; i < arr.length; i++) {
+                    combo.push(arr[i]);
                     helper(i + 1, combo);
                     combo.pop();
                 }
             }
             helper(0, []);
-            return results;
+            return res;
         }
 
-        // 4. Solving Execution
-        function startSolving() {
-            document.getElementById('results-section').style.display = 'block';
-            document.getElementById('results-container').innerHTML = '';
-            document.getElementById('natural-banner').style.display = 'none';
-            document.getElementById('solve-btn').disabled = true;
-            
-            // 1. Check for Naturals First
-            const naturalStatus = checkNaturals(selectedCards);
-            if (naturalStatus.isNatural) {
-                const banner = document.getElementById('natural-banner');
-                banner.textContent = `🏆 Instant Win Detected: ${naturalStatus.name}! 🏆`;
-                banner.style.display = 'block';
-                document.getElementById('solve-btn').disabled = false;
-                
-                // Show raw hand, skip permutations
-                renderResults([{
-                    front: sortForDisplay(selectedCards.slice(0,3)),
-                    mid: sortForDisplay(selectedCards.slice(3,8)),
-                    back: sortForDisplay(selectedCards.slice(8,13)),
-                    frontEval: {name: "Any"}, midEval: {name: "Any"}, backEval: {name: "Any"}
-                }], true);
-                
-                return;
+        // --- Poker helpers ---
+        function rankCounts(hand) {
+            const counts = {};
+            hand.forEach(c => { counts[c.r] = (counts[c.r] || 0) + 1; });
+            return counts;
+        }
+
+        function isFlush(hand) {
+            if (!hand.length) return false;
+            const s = hand[0].s;
+            return hand.every(c => c.s === s);
+        }
+
+        function straightHigh(hand) {
+            const vals = [...new Set(hand.map(c => c.r))].sort((a, b) => a - b);
+            if (vals.length !== hand.length) return null;
+            const max = Math.max(...vals), min = Math.min(...vals);
+            if (max - min === hand.length - 1) return max;
+            if (vals.includes(14)) {
+                const low = vals.map(v => v === 14 ? 1 : v).sort((a, b) => a - b);
+                const mx = Math.max(...low), mn = Math.min(...low);
+                if (low.length === hand.length && mx - mn === hand.length - 1) return 5;
+            }
+            return null;
+        }
+
+        function isStraight(hand) { return straightHigh(hand) !== null; }
+        function isStraightFlush(hand) { return isFlush(hand) && isStraight(hand); }
+        function isFourOfAKind(hand) { return Object.values(rankCounts(hand)).includes(4); }
+        function isFullHouse(hand) {
+            const v = Object.values(rankCounts(hand));
+            return v.includes(3) && v.includes(2);
+        }
+        function isThreeOfAKind(hand) { return Object.values(rankCounts(hand)).includes(3); }
+
+        function sortedRanksDesc(hand) {
+            return hand.map(c => c.r).sort((a, b) => b - a);
+        }
+
+        function evalFront(cards) {
+            const counts = rankCounts(cards);
+            const entries = Object.entries(counts).map(([r, n]) => [+r, n]).sort((a, b) => b[0] - a[0]);
+            if (entries.some(([, n]) => n === 3)) {
+                const trip = entries.find(([, n]) => n === 3)[0];
+                return { cat: 2, name: 'Three of a Kind', kickers: [trip], score: 2000000 + trip };
+            }
+            if (entries.some(([, n]) => n === 2)) {
+                const pair = entries.find(([, n]) => n === 2)[0];
+                const kicker = entries.find(([, n]) => n === 1)[0];
+                return { cat: 1, name: 'Pair', kickers: [pair, kicker], score: 1000000 + pair * 100 + kicker };
+            }
+            const ks = sortedRanksDesc(cards);
+            return { cat: 0, name: 'High Card', kickers: ks, score: ks[0] * 10000 + ks[1] * 100 + ks[2] };
+        }
+
+        function evalFive(cards) {
+            const counts = rankCounts(cards);
+            const byCount = Object.entries(counts).map(([r, n]) => ({ r: +r, n })).sort((a, b) => b.n - a.n || b.r - a.r);
+            const ranks = sortedRanksDesc(cards);
+            const flush = isFlush(cards);
+            const sh = straightHigh(cards);
+            const sf = flush && sh !== null;
+
+            if (sf) return { cat: 8, name: 'Straight Flush', kickers: [sh], score: 80000000 + sh };
+            if (byCount[0].n === 4) return { cat: 7, name: 'Four of a Kind', kickers: [byCount[0].r, byCount[1].r], score: 70000000 + byCount[0].r * 100 + byCount[1].r };
+            if (byCount[0].n === 3 && byCount[1].n === 2) return { cat: 6, name: 'Full House', kickers: [byCount[0].r, byCount[1].r], score: 60000000 + byCount[0].r * 100 + byCount[1].r };
+            if (flush) return { cat: 5, name: 'Flush', kickers: ranks, score: 50000000 + ranks[0] };
+            if (sh !== null) return { cat: 4, name: 'Straight', kickers: [sh], score: 40000000 + sh };
+            if (byCount[0].n === 3) return { cat: 3, name: 'Three of a Kind', kickers: [byCount[0].r, ...ranks.filter(r => r !== byCount[0].r)], score: 30000000 + byCount[0].r * 10000 };
+            if (byCount[0].n === 2 && byCount[1].n === 2) {
+                const hi = Math.max(byCount[0].r, byCount[1].r), lo = Math.min(byCount[0].r, byCount[1].r);
+                const k = byCount.find(x => x.n === 1).r;
+                return { cat: 2, name: 'Two Pair', kickers: [hi, lo, k], score: 20000000 + hi * 10000 + lo * 100 + k };
+            }
+            if (byCount[0].n === 2) return { cat: 1, name: 'Pair', kickers: [byCount[0].r, ...ranks.filter(r => r !== byCount[0].r)], score: 10000000 + byCount[0].r * 10000 };
+            return { cat: 0, name: 'High Card', kickers: ranks, score: ranks[0] * 1000000 + ranks[1] * 10000 };
+        }
+
+        function isValidArrangement(front, middle, back) {
+            const f = evalFront(front), m = evalFive(middle), b = evalFive(back);
+            return b.score > m.score && m.score > f.score;
+        }
+
+        // --- Royalties ---
+        function getRowRoyalty(hand, row, variant) {
+            const cfg = config[variant].royalties_bonuses;
+            let key = null, payout = 0;
+            if (row === 'front') {
+                if (isThreeOfAKind(hand)) { key = 'three_of_a_kind'; payout = cfg.front_3_cards.three_of_a_kind; }
+            } else if (row === 'middle') {
+                if (isStraightFlush(hand)) { key = 'straight_flush'; payout = cfg.middle_5_cards.straight_flush; }
+                else if (isFourOfAKind(hand)) { key = 'four_of_a_kind'; payout = cfg.middle_5_cards.four_of_a_kind; }
+                else if (isFullHouse(hand)) { key = 'full_house'; payout = cfg.middle_5_cards.full_house; }
+            } else if (row === 'back') {
+                if (isStraightFlush(hand)) { key = 'straight_flush'; payout = cfg.back_5_cards.straight_flush; }
+                else if (isFourOfAKind(hand)) { key = 'four_of_a_kind'; payout = cfg.back_5_cards.four_of_a_kind; }
+            }
+            return { key, payout, label: key ? ROYALTY_LABELS[key] : null };
+        }
+
+        function getArrangementRoyalties(front, middle, back, variant) {
+            const f = getRowRoyalty(front, 'front', variant);
+            const m = getRowRoyalty(middle, 'middle', variant);
+            const b = getRowRoyalty(back, 'back', variant);
+            return { front: f, middle: m, back: b, total: f.payout + m.payout + b.payout };
+        }
+
+        function detectPossibleRoyalties(cards, variant) {
+            const idx = [...Array(13).keys()];
+            const possible = new Set();
+            combinations(idx, 3).forEach(fIdx => {
+                const front = fIdx.map(i => cards[i]);
+                const rem = idx.filter(i => !fIdx.includes(i));
+                combinations(rem, 5).forEach(mIdx => {
+                    const middle = mIdx.map(i => cards[i]);
+                    const bIdx = rem.filter(i => !mIdx.includes(i));
+                    const back = bIdx.map(i => cards[i]);
+                    if (!isValidArrangement(front, middle, back)) return;
+                    if (isThreeOfAKind(front)) possible.add('front:three_of_a_kind');
+                    const mr = getRowRoyalty(middle, 'middle', variant);
+                    const br = getRowRoyalty(back, 'back', variant);
+                    if (mr.key) possible.add(`middle:${mr.key}`);
+                    if (br.key) possible.add(`back:${br.key}`);
+                });
+            });
+            return [...possible];
+        }
+
+        // --- Naturals ---
+        function detectThreeOfType(cards, predicate, sizes) {
+            const idx = [...Array(cards.length).keys()];
+            for (const c1 of combinations(idx, sizes[0])) {
+                const hand1 = c1.map(i => cards[i]);
+                if (!predicate(hand1)) continue;
+                const rem1 = idx.filter(i => !c1.includes(i));
+                for (const c2 of combinations(rem1, sizes[1])) {
+                    const hand2 = c2.map(i => cards[i]);
+                    if (!predicate(hand2)) continue;
+                    const rem2 = rem1.filter(i => !c2.includes(i));
+                    const hand3 = rem2.map(i => cards[i]);
+                    if (hand3.length === sizes[2] && predicate(hand3)) return true;
+                }
+            }
+            return false;
+        }
+
+        function detectNaturals(cards, variant) {
+            const found = [];
+            const counts = rankCounts(cards);
+            const rankVals = Object.keys(counts).map(Number);
+            const uniqueRanks = rankVals.length;
+            const suitVals = {};
+            cards.forEach(c => { suitVals[c.s] = (suitVals[c.s] || 0) + 1; });
+            const pairs = Object.values(counts).filter(n => n === 2).length;
+            const trips = Object.values(counts).filter(n => n === 3).length;
+            const natCfg = config[variant].naturals_automatic_wins;
+
+            if (variant === 'traditional_chinese_poker') {
+                if (uniqueRanks === 13 && Object.keys(suitVals).length === 1) found.push({ key: 'clean_dragon', payout: natCfg.clean_dragon });
+                else if (uniqueRanks === 13) found.push({ key: 'dragon', payout: natCfg.dragon });
+                if (Object.keys(suitVals).length === 4) found.push({ key: 'all_colors', payout: natCfg.all_colors });
+            } else {
+                if (uniqueRanks === 13 && Object.keys(suitVals).length === 1) {
+                    found.push({ key: 'dragon_same_suit', payout: natCfg.dragon_same_suit });
+                } else if (uniqueRanks === 13) {
+                    found.push({ key: 'dragon_mixed_suit', payout: natCfg.dragon_mixed_suit });
+                }
+                if (pairs === 5 && trips === 1) found.push({ key: 'five_pairs_one_trips', payout: natCfg.five_pairs_one_trips });
             }
 
-            // 2. Normal Hand Solving
-            document.getElementById('loading').style.display = 'block';
-            
-            setTimeout(() => {
-                const results = solveHands(selectedCards);
-                renderResults(results, false);
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('solve-btn').disabled = false;
-            }, 100);
+            if (pairs === 6) found.push({ key: 'six_pairs', payout: natCfg.six_pairs });
+            if (detectThreeOfType(cards, isFlush, [3, 5, 5])) found.push({ key: 'three_flushes', payout: natCfg.three_flushes });
+            if (detectThreeOfType(cards, isStraight, [3, 5, 5])) found.push({ key: 'three_straights', payout: natCfg.three_straights });
+
+            return found;
         }
 
-        function solveHands(cards) {
-            let validHands = [];
-            
-            let backCombs = getCombinations(cards, 5);
-            for(let i=0; i<backCombs.length; i++) {
-                let back = backCombs[i];
-                let backEval = eval5(back);
-                
-                let rem8 = cards.filter(c => !back.includes(c));
-                let midCombs = getCombinations(rem8, 5);
-                
-                for(let j=0; j<midCombs.length; j++) {
-                    let mid = midCombs[j];
-                    let midEval = eval5(mid);
-                    
-                    if(midEval.score > backEval.score) continue; 
-                    
-                    let front = rem8.filter(c => !mid.includes(c));
-                    let frontEval = eval3(front);
-                    
-                    if(frontEval.score > midEval.score) continue; 
-                    
-                    validHands.push({
-                        front: sortForDisplay(front), mid: sortForDisplay(mid), back: sortForDisplay(back),
+        function getAcePayout(front, cards, variant) {
+            if (variant !== 'vietnamese_mau_binh') return { key: null, payout: 0, label: null };
+            const aceCount = cards.filter(c => c.r === 14).length;
+            const frontAces = front.filter(c => c.r === 14).length;
+            const ap = config.vietnamese_mau_binh.ace_payouts;
+            if (aceCount === 0) return { key: 'no_aces_penalty', payout: ap.no_aces_penalty, label: 'No Aces' };
+            if (aceCount === 4) return { key: 'four_aces', payout: ap.four_aces, label: 'Four Aces' };
+            if (aceCount === 3 && frontAces === 3) return { key: 'three_aces_front_hand', payout: ap.three_aces_front_hand, label: 'Three Aces (Front)' };
+            if (aceCount === 3) return { key: 'three_aces', payout: ap.three_aces, label: 'Three Aces' };
+            if (aceCount === 2) return { key: 'two_aces', payout: ap.two_aces, label: 'Two Aces' };
+            return { key: null, payout: 0, label: null };
+        }
+
+        // --- Solver ---
+        function solveHands(cards, variant) {
+            const idx = [...Array(13).keys()];
+            const valid = [];
+
+            for (const fIdx of combinations(idx, 3)) {
+                const front = fIdx.map(i => cards[i]);
+                const rem1 = idx.filter(i => !fIdx.includes(i));
+                for (const mIdx of combinations(rem1, 5)) {
+                    const middle = mIdx.map(i => cards[i]);
+                    const bIdx = rem1.filter(i => !mIdx.includes(i));
+                    const back = bIdx.map(i => cards[i]);
+                    if (!isValidArrangement(front, middle, back)) continue;
+
+                    const frontEval = evalFront(front);
+                    const midEval = evalFive(middle);
+                    const backEval = evalFive(back);
+                    const royalties = getArrangementRoyalties(front, middle, back, variant);
+                    const ace = getAcePayout(front, cards, variant);
+                    const royaltyTotal = royalties.total;
+                    const totalPayout = royaltyTotal + ace.payout;
+                    const strength = backEval.score + midEval.score * 0.001 + frontEval.score * 0.000001;
+
+                    valid.push({
+                        front, middle, back,
                         frontEval, midEval, backEval,
-                        tierSum: (backEval.cat * 2) + (midEval.cat * 2) + (frontEval.cat * 3) 
+                        royalties, ace,
+                        royaltyTotal, totalPayout, strength,
+                        hasRoyalties: royaltyTotal > 0
                     });
                 }
             }
-            
-            validHands.sort((a,b) => {
-                if (b.tierSum !== a.tierSum) return b.tierSum - a.tierSum;
-                if (b.frontEval.score !== a.frontEval.score) return b.frontEval.score - a.frontEval.score;
-                if (b.midEval.score !== a.midEval.score) return b.midEval.score - a.midEval.score;
-                return b.backEval.score - a.backEval.score;
+
+            valid.sort((a, b) => {
+                if (b.royaltyTotal !== a.royaltyTotal) return b.royaltyTotal - a.royaltyTotal;
+                if (b.totalPayout !== a.totalPayout) return b.totalPayout - a.totalPayout;
+                return b.strength - a.strength;
             });
-            
-            return validHands.slice(0, 5);
+
+            const naturals = detectNaturals(cards, variant);
+            const possibleRoyalties = detectPossibleRoyalties(cards, variant);
+            const hasRoyaltyPotential = possibleRoyalties.length > 0;
+
+            return {
+                arrangements: valid.slice(0, 8),
+                naturals,
+                possibleRoyalties,
+                hasRoyaltyPotential,
+                totalValid: valid.length
+            };
         }
 
-        function sortForDisplay(cards) {
-            return [...cards].sort((a,b) => b.r - a.r);
-        }
-
-        // 5. Rendering
-        function renderResults(results, isNatural) {
-            const container = document.getElementById('results-container');
-            container.innerHTML = '';
-            
-            if (results.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:red; font-weight:bold;">No valid combinations found (Foul Hand)!</p>';
-                return;
-            }
-
-            results.forEach((res, index) => {
-                const headerText = isNatural ? "Unsorted Cards (Natural Hand)" : `Option ${index + 1}`;
-                const html = `
-                    <div class="result-card">
-                        <div class="result-header">
-                            <span>${headerText}</span>
-                        </div>
-                        <div class="hand-row">
-                            <span class="hand-name">Front</span>
-                            <div class="mini-cards">${renderMiniCards(res.front)}</div>
-                            <span class="hand-desc">${res.frontEval.name}</span>
-                        </div>
-                        <div class="hand-row">
-                            <span class="hand-name">Middle</span>
-                            <div class="mini-cards">${renderMiniCards(res.mid)}</div>
-                            <span class="hand-desc">${res.midEval.name}</span>
-                        </div>
-                        <div class="hand-row">
-                            <span class="hand-name">Back</span>
-                            <div class="mini-cards">${renderMiniCards(res.back)}</div>
-                            <span class="hand-desc">${res.backEval.name}</span>
-                        </div>
-                    </div>
-                `;
-                container.innerHTML += html;
-            });
+        // --- Rendering ---
+        function formatPayout(n) {
+            if (n > 0) return `+${n}`;
+            if (n < 0) return `${n}`;
+            return '—';
         }
 
         function renderMiniCards(cards) {
-            return cards.map(c => `
-                <div class="mini-card ${c.color}">
-                    <span>${c.display}</span>
-                    <span style="font-size:10px">${c.symbol}</span>
-                </div>
-            `).join('');
+            return cards.map(c =>
+                `<div class="mini-card ${c.color}"><span>${c.display}</span><span class="suit-sm">${c.symbol}</span></div>`
+            ).join('');
         }
 
-        // Init
+        function renderHandRow(label, cards, eval_, royalty) {
+            const hasRoyalty = royalty.payout > 0;
+            const desc = hasRoyalty ? `${eval_.name} · ${royalty.label}` : eval_.name;
+            return `
+                <div class="hand-row${hasRoyalty ? ' has-royalty' : ''}">
+                    <span class="hand-name">${label}</span>
+                    <span class="hand-payout${royalty.payout ? '' : ' zero'}">${formatPayout(royalty.payout)}</span>
+                    <div class="mini-cards">${renderMiniCards(cards)}</div>
+                    <span class="hand-desc">${desc}</span>
+                </div>`;
+        }
+
+        function renderResults(results, variant) {
+            const container = document.getElementById('results-container');
+            container.innerHTML = '';
+
+            const { arrangements, naturals, hasRoyaltyPotential } = results;
+
+            if (hasRoyaltyPotential) {
+                const labels = results.possibleRoyalties.map(r => {
+                    const [row, key] = r.split(':');
+                    return `${row}: ${ROYALTY_LABELS[key] || key}`;
+                });
+                const banner = document.createElement('div');
+                banner.className = 'natural-banner royalty';
+                banner.innerHTML = `<h3>Royalties Available</h3><p>${labels.join(' · ')} — royalty hands prioritized</p>`;
+                container.appendChild(banner);
+            } else if (naturals.length) {
+                const labels = naturals.map(n => `${NATURAL_LABELS[n.key] || n.key} (+${n.payout})`);
+                const banner = document.createElement('div');
+                banner.className = 'natural-banner';
+                banner.innerHTML = `<h3>Natural Detected</h3><p>${labels.join(' · ')}</p>`;
+                container.appendChild(banner);
+            }
+
+            if (!arrangements.length) {
+                container.innerHTML += '<p style="text-align:center;color:#6b7280">No valid arrangements found for these cards.</p>';
+                return;
+            }
+
+            arrangements.forEach((arr, i) => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                const naturalBonus = (!hasRoyaltyPotential && naturals.length)
+                    ? naturals.reduce((s, n) => s + n.payout, 0) : 0;
+                const grandTotal = arr.totalPayout + naturalBonus;
+
+                let aceHtml = '';
+                if (variant === 'vietnamese_mau_binh' && arr.ace.label) {
+                    aceHtml = `<div class="ace-row"><span>${arr.ace.label}</span><span style="font-weight:bold;color:${arr.ace.payout >= 0 ? 'var(--success)' : '#ef4444'}">${formatPayout(arr.ace.payout)}</span></div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="result-header">
+                        <span>Setup #${i + 1}${arr.hasRoyalties ? ' ★' : ''}</span>
+                        <span class="result-total">Payout: ${formatPayout(grandTotal)}</span>
+                    </div>
+                    ${renderHandRow('Front', arr.front, arr.frontEval, arr.royalties.front)}
+                    ${renderHandRow('Middle', arr.middle, arr.midEval, arr.royalties.middle)}
+                    ${renderHandRow('Back', arr.back, arr.backEval, arr.royalties.back)}
+                    ${aceHtml}
+                `;
+                container.appendChild(card);
+            });
+
+            if (results.totalValid > arrangements.length) {
+                const note = document.createElement('p');
+                note.className = 'results-note';
+                note.textContent = `Top ${arrangements.length} of ${results.totalValid} valid setups (royalties first).`;
+                container.appendChild(note);
+            }
+        }
+
         buildDeck();
     </script>
 </body>
