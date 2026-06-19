@@ -734,8 +734,7 @@
                     const royaltyTotal = royalties.total;
                     const totalPayout = royaltyTotal + ace.payout;
                     const strength = handStrengthScore(front, middle, back);
-                    // Strength dominates; royalties nudge among similar hands (don't sacrifice pairs for +3 front trips)
-                    const arrangementScore = strength + royaltyTotal * 1e9 + ace.payout * 1e7;
+                    const arrangementScore = strength + ace.payout * 1e7;
 
                     valid.push({
                         front, middle, back,
@@ -747,7 +746,10 @@
                 }
             }
 
-            valid.sort((a, b) => b.arrangementScore - a.arrangementScore);
+            valid.sort((a, b) => {
+                if (b.royaltyTotal !== a.royaltyTotal) return b.royaltyTotal - a.royaltyTotal;
+                return b.arrangementScore - a.arrangementScore;
+            });
 
             const naturals = detectNaturals(cards, variant);
             const possibleRoyalties = detectPossibleRoyalties(cards, variant);
@@ -800,7 +802,7 @@
                 });
                 const banner = document.createElement('div');
                 banner.className = 'natural-banner royalty';
-                banner.innerHTML = `<h3>Royalties Available</h3><p>${labels.join(' · ')}</p>`;
+                banner.innerHTML = `<h3>Royalties Available</h3><p>${labels.join(' · ')} — royalty setups ranked first</p>`;
                 container.appendChild(banner);
             } else if (naturals.length) {
                 const labels = naturals.map(n => `${NATURAL_LABELS[n.key] || n.key} (+${n.payout})`);
@@ -843,7 +845,7 @@
             if (results.totalValid > arrangements.length) {
                 const note = document.createElement('p');
                 note.className = 'results-note';
-                note.textContent = `Top ${arrangements.length} of ${results.totalValid} valid setups (strongest hands first, royalties as bonus).`;
+                note.textContent = `Top ${arrangements.length} of ${results.totalValid} valid setups (royalties first, then strongest hands).`;
                 container.appendChild(note);
             }
         }
