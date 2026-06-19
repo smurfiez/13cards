@@ -593,16 +593,16 @@
             return beatsFive(back, middle) && beatsFront(middle, front);
         }
 
-        function evalToNumber(e) {
-            let n = e.cat;
-            for (const k of e.kickers) n = n * 100 + k;
-            return n;
+        function encodeEval(e) {
+            let kickers = 0;
+            for (const k of e.kickers) kickers = kickers * 100 + k;
+            return e.cat * 1e10 + kickers;
         }
 
         function handStrengthScore(front, middle, back) {
-            return evalToNumber(evalFive(back)) * 1e12
-                + evalToNumber(evalFive(middle)) * 1e6
-                + evalToNumber(evalFront(front));
+            return encodeEval(evalFive(back)) * 1e12
+                + encodeEval(evalFive(middle)) * 1e6
+                + encodeEval(evalFront(front));
         }
 
         // --- Royalties ---
@@ -734,22 +734,20 @@
                     const royaltyTotal = royalties.total;
                     const totalPayout = royaltyTotal + ace.payout;
                     const strength = handStrengthScore(front, middle, back);
+                    // Strength dominates; royalties nudge among similar hands (don't sacrifice pairs for +3 front trips)
+                    const arrangementScore = strength + royaltyTotal * 1e9 + ace.payout * 1e7;
 
                     valid.push({
                         front, middle, back,
                         frontEval, midEval, backEval,
                         royalties, ace,
-                        royaltyTotal, totalPayout, strength,
+                        royaltyTotal, totalPayout, strength, arrangementScore,
                         hasRoyalties: royaltyTotal > 0
                     });
                 }
             }
 
-            valid.sort((a, b) => {
-                if (b.royaltyTotal !== a.royaltyTotal) return b.royaltyTotal - a.royaltyTotal;
-                if (b.totalPayout !== a.totalPayout) return b.totalPayout - a.totalPayout;
-                return b.strength - a.strength;
-            });
+            valid.sort((a, b) => b.arrangementScore - a.arrangementScore);
 
             const naturals = detectNaturals(cards, variant);
             const possibleRoyalties = detectPossibleRoyalties(cards, variant);
@@ -802,7 +800,7 @@
                 });
                 const banner = document.createElement('div');
                 banner.className = 'natural-banner royalty';
-                banner.innerHTML = `<h3>Royalties Available</h3><p>${labels.join(' · ')} — royalty hands prioritized</p>`;
+                banner.innerHTML = `<h3>Royalties Available</h3><p>${labels.join(' · ')}</p>`;
                 container.appendChild(banner);
             } else if (naturals.length) {
                 const labels = naturals.map(n => `${NATURAL_LABELS[n.key] || n.key} (+${n.payout})`);
@@ -845,7 +843,7 @@
             if (results.totalValid > arrangements.length) {
                 const note = document.createElement('p');
                 note.className = 'results-note';
-                note.textContent = `Top ${arrangements.length} of ${results.totalValid} valid setups (royalties first).`;
+                note.textContent = `Top ${arrangements.length} of ${results.totalValid} valid setups (strongest hands first, royalties as bonus).`;
                 container.appendChild(note);
             }
         }
