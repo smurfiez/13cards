@@ -122,15 +122,15 @@ function beatsFive(handA, handB) {
 /**
  * Chinese poker foul rule: middle must beat front.
  * Cross-size comparison — e.g. front pair needs middle pair+ with higher kickers,
- * front trips only allows middle high card or two-pair+ (not a lone pair).
+ * front trips only allows middle three-of-a-kind+ (not pair or two pair).
  */
 function beatsFront(middle, front) {
     const m = evalFive(middle);
     const f = evalFront(front);
 
     if (f.cat === 2) {
-        if (m.cat === 1) return false;
-        return true;
+        if (m.cat < 3) return false;
+        return compareEval(m, f) > 0;
     }
     if (f.cat === 1) {
         if (m.cat === 0) return false;
