@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#f3f4f6">
+    <title>Random Hand — 13 Cards</title>
+    <style>
+        :root {
+            --bg: #f3f4f6; --card-bg: #ffffff; --primary: #2563eb; --text: #1f2937;
+            --border: #d1d5db; --red-suit: #ef4444; --black-suit: #111827;
+            --success: #10b981; --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body {
+            background: var(--bg); color: var(--text); margin: 0;
+            padding: calc(12px + var(--safe-top)) 16px calc(88px + var(--safe-bottom));
+            max-width: 900px; margin-inline: auto; min-height: 100dvh;
+        }
+        h1 { text-align: center; color: var(--primary); font-size: 1.5rem; margin: 0 0 6px; }
+        p.subtitle { text-align: center; color: #6b7280; font-size: 0.875rem; margin: 0 0 16px; line-height: 1.4; }
+        .top-nav { display: flex; justify-content: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .top-nav a {
+            padding: 10px 14px; border-radius: 10px; font-size: 0.8125rem; font-weight: 700;
+            text-decoration: none; color: #6b7280; background: white; border: 1px solid var(--border);
+        }
+        .top-nav a.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .section {
+            background: var(--card-bg); padding: 16px; border-radius: 16px;
+            border: 1px solid var(--border); margin-bottom: 14px;
+        }
+        .variant-segment { display: flex; background: #e5e7eb; border-radius: 10px; padding: 3px; margin-bottom: 14px; }
+        .variant-segment label { flex: 1; position: relative; cursor: pointer; }
+        .variant-segment input { position: absolute; opacity: 0; }
+        .variant-segment span {
+            display: block; text-align: center; padding: 10px 6px;
+            font-size: 0.8125rem; font-weight: 600; color: #6b7280; border-radius: 8px;
+        }
+        .variant-segment input:checked + span { background: white; color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .hand-label {
+            font-size: 0.6875rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.06em; color: #6b7280; margin-bottom: 10px; text-align: center;
+        }
+        .card-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 12px; }
+        .mini-card {
+            flex: 0 0 48px; width: 48px; height: 64px; border: 1.5px solid var(--border);
+            border-radius: 10px; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; font-size: 0.9375rem; font-weight: 700; background: white;
+        }
+        .mini-card .suit-sm { font-size: 0.6875rem; }
+        .mini-card.card-red { color: var(--red-suit); }
+        .mini-card.card-black { color: var(--black-suit); }
+        .json-panel h3 {
+            font-size: 0.8125rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.05em; color: #6b7280; margin: 0 0 8px;
+        }
+        .json-textarea {
+            width: 100%; min-height: 200px; padding: 10px 12px;
+            font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.75rem; line-height: 1.45; border: 1px solid var(--border);
+            border-radius: 10px; background: #f9fafb; resize: vertical;
+        }
+        .json-hint { font-size: 0.75rem; color: #6b7280; margin: 8px 0 0; line-height: 1.4; }
+        .action-dock {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
+            display: flex; gap: 10px; padding: 10px 16px calc(10px + var(--safe-bottom));
+            background: rgba(255,255,255,0.92); backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(0,0,0,0.08);
+        }
+        .btn {
+            flex: 1; padding: 14px 12px; border: none; border-radius: 12px;
+            font-size: 0.9375rem; font-weight: 700; cursor: pointer; color: white; min-height: 48px;
+        }
+        .btn-primary { background: var(--primary); flex: 1.3; }
+        .btn-secondary { background: #6b7280; }
+        .btn-small {
+            padding: 10px 14px; border: none; border-radius: 10px; font-size: 0.8125rem;
+            font-weight: 700; background: var(--primary); color: white; cursor: pointer; margin-top: 8px;
+        }
+        @media (min-width: 600px) {
+            body { padding: 20px 20px 32px; }
+            .action-dock { position: static; border: none; background: transparent; padding: 16px 0 0; max-width: 400px; margin: 0 auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="top-nav">
+        <a href="index.html">Solver</a>
+        <a href="payouts.html">Payouts</a>
+        <a href="random.html" class="active">Random</a>
+    </nav>
+
+    <h1>Random Hand</h1>
+    <p class="subtitle">Deal cards, copy JSON test case with expected setup</p>
+
+    <div class="section">
+        <div class="variant-segment" role="radiogroup">
+            <label><input type="radio" name="variant" value="traditional_chinese_poker" checked><span>China</span></label>
+            <label><input type="radio" name="variant" value="vietnamese_mau_binh"><span>Vietnam</span></label>
+        </div>
+        <div class="hand-label">Your 13 cards</div>
+        <div class="card-row" id="card-row"></div>
+    </div>
+
+    <div class="section json-panel">
+        <h3>Test case JSON</h3>
+        <textarea class="json-textarea" id="json-output" readonly></textarea>
+        <button type="button" class="btn-small" id="copy-btn">Copy JSON</button>
+        <p class="json-hint">Includes <code>cards</code> and solver <code>expected_setup</code> (front / middle / back hands + payouts). Paste into the Solver import box to verify.</p>
+    </div>
+
+    <div class="action-dock">
+        <button class="btn btn-secondary" type="button" id="shuffle-btn">Shuffle</button>
+        <button class="btn btn-primary" type="button" id="solver-btn">Open in Solver</button>
+    </div>
+
+    <script src="cards.js"></script>
+    <script src="config.js"></script>
+    <script src="solver.js"></script>
+    <script src="testcase.js"></script>
+    <script>
+        let currentHand = [];
+
+        function getVariant() {
+            return document.querySelector('input[name=variant]:checked').value;
+        }
+
+        function renderHand(cards) {
+            currentHand = cards;
+            document.getElementById('card-row').innerHTML = cards.map(c =>
+                `<div class="mini-card ${c.color}"><span>${c.display}</span><span class="suit-sm">${c.symbol}</span></div>`
+            ).join('');
+            const variant = getVariant();
+            const results = solveHands(cards, variant);
+            document.getElementById('json-output').value = testCaseToJson(buildTestCase(cards, variant, results));
+        }
+
+        function shuffle() { renderHand(random13()); }
+
+        document.getElementById('shuffle-btn').addEventListener('click', shuffle);
+        document.querySelectorAll('input[name=variant]').forEach(r => r.addEventListener('change', () => {
+            if (currentHand.length) renderHand(currentHand);
+        }));
+        document.getElementById('solver-btn').addEventListener('click', () => {
+            savePreset(currentHand.map(c => c.id));
+            sessionStorage.setItem('presetTestCase', document.getElementById('json-output').value);
+            window.location.href = 'index.html?auto=1';
+        });
+        document.getElementById('copy-btn').addEventListener('click', async () => {
+            const ta = document.getElementById('json-output');
+            try { await navigator.clipboard.writeText(ta.value); } catch { ta.select(); document.execCommand('copy'); }
+        });
+
+        shuffle();
+    </script>
+</body>
+</html>

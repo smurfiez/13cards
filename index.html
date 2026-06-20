@@ -24,12 +24,13 @@
             --dock-h: 72px;
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        html { -webkit-text-size-adjust: 100%; }
+        html { -webkit-text-size-adjust: 100%; overflow-x: hidden; }
         body {
             background-color: var(--bg); color: var(--text); margin: 0;
-            padding: calc(12px + var(--safe-top)) 16px calc(var(--dock-h) + var(--safe-bottom) + 16px);
+            padding: calc(8px + var(--safe-top)) 8px calc(var(--dock-h) + var(--safe-bottom) + 12px);
             max-width: 900px; margin-inline: auto;
             min-height: 100dvh;
+            overflow-x: hidden;
         }
         h1, h2 { text-align: center; color: var(--primary); margin: 0 0 6px; }
         h1 { font-size: 1.5rem; letter-spacing: -0.02em; }
@@ -37,8 +38,8 @@
         p.subtitle { text-align: center; color: #6b7280; font-size: 0.875rem; margin: 0 0 16px; line-height: 1.4; }
 
         .section {
-            background: var(--card-bg); padding: 14px; border-radius: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 16px; border: 1px solid var(--border);
+            background: var(--card-bg); padding: 10px; border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 12px; border: 1px solid var(--border);
         }
 
         /* iOS-style segmented control */
@@ -60,58 +61,39 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
 
-        /* Deck grid: all 13 ranks visible per suit, no horizontal scroll */
-        #deck-grid { display: flex; flex-direction: column; gap: 6px; }
+        /* Deck grid: 7 cols × 2 rows per suit on phone — all ranks visible, no horizontal scroll */
+        #deck-grid { display: flex; flex-direction: column; gap: 6px; overflow-x: hidden; }
 
-        .rank-header {
-            display: grid;
-            grid-template-columns: 24px 1fr;
-            gap: 4px;
-            margin-bottom: 2px;
-        }
-        .rank-header-label { width: 24px; }
-        .rank-header-cells {
-            display: grid;
-            grid-template-columns: repeat(13, 1fr);
-            gap: 3px;
-        }
-        .rank-header-cells span {
-            text-align: center;
-            font-size: 0.625rem;
-            font-weight: 800;
-            color: #9ca3af;
-            line-height: 1;
-        }
+        .rank-header { display: none; }
 
         .suit-row {
-            display: grid;
-            grid-template-columns: 24px 1fr;
-            gap: 4px;
-            align-items: stretch;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
         }
         .suit-label {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.125rem;
+            font-size: 0.75rem;
             font-weight: 700;
             line-height: 1;
+            padding-left: 2px;
         }
         .suit-cards {
             display: grid;
-            grid-template-columns: repeat(13, 1fr);
-            gap: 3px;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 4px;
+            width: 100%;
         }
 
         .card-btn {
             width: 100%;
+            min-width: 0;
+            max-width: 100%;
             aspect-ratio: 5 / 7;
-            min-height: 40px;
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
             background: white;
             font-weight: 700;
-            font-size: clamp(0.6875rem, 2.9vw, 0.9375rem);
+            font-size: 0.8125rem;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -228,6 +210,23 @@
 
         #loading { text-align: center; font-weight: 700; color: var(--primary); display: none; padding: 24px; }
 
+        .json-panel { margin-top: 14px; }
+        .json-panel h3 {
+            font-size: 0.8125rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.05em; color: #6b7280; margin: 0 0 8px;
+        }
+        .json-textarea {
+            width: 100%; min-height: 140px; padding: 10px 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.75rem; line-height: 1.45; border: 1px solid var(--border);
+            border-radius: 10px; background: #f9fafb; color: var(--text); resize: vertical;
+        }
+        .json-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+        .json-actions .btn { flex: 1; min-width: 120px; padding: 12px; font-size: 0.875rem; }
+        .json-hint { font-size: 0.75rem; color: #6b7280; margin: 8px 0 0; line-height: 1.4; }
+        .match-ok { color: var(--success); font-size: 0.8125rem; font-weight: 700; margin-top: 8px; }
+        .match-bad { color: #ef4444; font-size: 0.8125rem; font-weight: 700; margin-top: 8px; }
+
         @media (min-width: 600px) {
             :root { --dock-h: 0px; }
             body { padding: 20px 20px 32px; }
@@ -289,6 +288,7 @@
     <nav class="top-nav">
         <a href="index.html" class="active">Solver</a>
         <a href="payouts.html">Payouts</a>
+        <a href="random.html">Random</a>
     </nav>
 
     <h1>13 Cards Solver</h1>
@@ -306,6 +306,16 @@
             </label>
         </div>
         <div id="deck-grid"></div>
+
+        <div class="json-panel">
+            <h3>Import test case (JSON)</h3>
+            <textarea class="json-textarea" id="import-json" placeholder='{"variant":"traditional_chinese_poker","cards":["As","Kh",...],"expected_setup":{...}}'></textarea>
+            <div class="json-actions">
+                <button type="button" class="btn btn-clear" id="import-btn">Load JSON</button>
+                <button type="button" class="btn btn-primary" id="import-solve-btn">Load &amp; Solve</button>
+            </div>
+            <p class="json-hint" id="import-status"></p>
+        </div>
     </div>
 
     <div class="action-dock">
@@ -318,17 +328,24 @@
         <h2>Results</h2>
         <div id="loading">Calculating...</div>
         <div id="results-container"></div>
+        <div class="json-panel" id="export-panel" style="display:none;">
+            <h3>Export test case (JSON)</h3>
+            <textarea class="json-textarea" id="export-json" readonly></textarea>
+            <div class="json-actions">
+                <button type="button" class="btn btn-primary" id="copy-json-btn">Copy JSON</button>
+            </div>
+            <p class="json-hint">Share this file to reproduce the hand and expected top setup from the solver.</p>
+            <p id="match-status"></p>
+        </div>
     </div>
 
+    <script src="cards.js"></script>
     <script src="config.js"></script>
+    <script src="solver.js"></script>
+    <script src="testcase.js"></script>
     <script>
-        const suits = [
-            { id: 's', symbol: '♠', color: 'card-black' },
-            { id: 'h', symbol: '♥', color: 'card-red' },
-            { id: 'c', symbol: '♣', color: 'card-black' },
-            { id: 'd', symbol: '♦', color: 'card-red' }
-        ];
-        const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+        const suits = SUITS;
+        const ranks = RANKS;
         const catNames = ['High Card', 'Pair', 'Two Pair', 'Three of a Kind', 'Straight', 'Flush', 'Full House', 'Four of a Kind', 'Straight Flush'];
 
         let selectedCards = [];
@@ -341,15 +358,6 @@
         function buildDeck() {
             const grid = document.getElementById('deck-grid');
             grid.innerHTML = '';
-
-            const rankHeader = document.createElement('div');
-            rankHeader.className = 'rank-header';
-            rankHeader.innerHTML = `
-                <div class="rank-header-label"></div>
-                <div class="rank-header-cells">
-                    ${ranks.map(r => `<span>${r}</span>`).join('')}
-                </div>`;
-            grid.appendChild(rankHeader);
 
             suits.forEach(suit => {
                 const row = document.createElement('div');
@@ -397,13 +405,17 @@
             updateStatus();
         }
 
-        function getCardValue(rank) {
-            if (rank === 'A') return 14;
-            if (rank === 'K') return 13;
-            if (rank === 'Q') return 12;
-            if (rank === 'J') return 11;
-            if (rank === 'T') return 10;
-            return parseInt(rank);
+        function applyPreset(cardIds) {
+            if (!cardIds || !cardIds.length) return;
+            clearSelection();
+            cardIds.forEach(id => {
+                if (selectedCards.length >= 13) return;
+                const suitId = id.slice(-1);
+                const rank = id.slice(0, -1);
+                const suit = suits.find(s => s.id === suitId);
+                const btn = document.querySelector(`[data-card-id="${id}"]`);
+                if (suit && btn) toggleCard(rank, suit, btn);
+            });
         }
 
         function clearSelection() {
@@ -446,323 +458,59 @@
             }, 50);
         }
 
-        // --- Combinatorics ---
-        function combinations(arr, k) {
-            const res = [];
-            function helper(start, combo) {
-                if (combo.length === k) { res.push(combo.slice()); return; }
-                for (let i = start; i < arr.length; i++) {
-                    combo.push(arr[i]);
-                    helper(i + 1, combo);
-                    combo.pop();
+        let lastExpectedSetup = null;
+
+        function loadTestCaseFromJson(autoSolve) {
+            const status = document.getElementById('import-status');
+            try {
+                const parsed = parseTestCase(document.getElementById('import-json').value);
+                document.querySelector(`input[name=variant][value="${parsed.variant}"]`).checked = true;
+                buildDeck();
+                applyPreset(parsed.cards.map(c => c.id));
+                lastExpectedSetup = parsed.expected_setup;
+                status.textContent = `Loaded ${parsed.cards.length} cards (${parsed.variant.replace(/_/g, ' ')}).`;
+                status.className = 'json-hint match-ok';
+                if (autoSolve && selectedCards.length === 13) startSolving();
+            } catch (e) {
+                status.textContent = e.message || 'Invalid JSON';
+                status.className = 'json-hint match-bad';
+            }
+        }
+
+        function updateExportJson(cards, variant, results) {
+            const panel = document.getElementById('export-panel');
+            const ta = document.getElementById('export-json');
+            const matchEl = document.getElementById('match-status');
+            const testCase = buildTestCase(cards, variant, results);
+            ta.value = testCaseToJson(testCase);
+            panel.style.display = 'block';
+            if (lastExpectedSetup && results.arrangements[0]) {
+                const mismatches = compareSetupToExpected(results.arrangements[0], lastExpectedSetup);
+                if (mismatches === null) {
+                    matchEl.textContent = '✓ Top setup matches expected_setup from imported JSON.';
+                    matchEl.className = 'match-ok';
+                } else {
+                    matchEl.textContent = `✗ Mismatch in row(s): ${mismatches.join(', ')}`;
+                    matchEl.className = 'match-bad';
                 }
-            }
-            helper(0, []);
-            return res;
-        }
-
-        // --- Poker helpers ---
-        function rankCounts(hand) {
-            const counts = {};
-            hand.forEach(c => { counts[c.r] = (counts[c.r] || 0) + 1; });
-            return counts;
-        }
-
-        function isFlush(hand) {
-            if (!hand.length) return false;
-            const s = hand[0].s;
-            return hand.every(c => c.s === s);
-        }
-
-        function straightHigh(hand) {
-            const vals = [...new Set(hand.map(c => c.r))].sort((a, b) => a - b);
-            if (vals.length !== hand.length) return null;
-            const max = Math.max(...vals), min = Math.min(...vals);
-            if (max - min === hand.length - 1) return max;
-            if (vals.includes(14)) {
-                const low = vals.map(v => v === 14 ? 1 : v).sort((a, b) => a - b);
-                const mx = Math.max(...low), mn = Math.min(...low);
-                if (low.length === hand.length && mx - mn === hand.length - 1) return 5;
-            }
-            return null;
-        }
-
-        function isStraight(hand) { return straightHigh(hand) !== null; }
-        function isStraightFlush(hand) { return isFlush(hand) && isStraight(hand); }
-        function isFourOfAKind(hand) { return Object.values(rankCounts(hand)).includes(4); }
-        function isFullHouse(hand) {
-            const v = Object.values(rankCounts(hand));
-            return v.includes(3) && v.includes(2);
-        }
-        function isThreeOfAKind(hand) { return Object.values(rankCounts(hand)).includes(3); }
-
-        function sortedRanksDesc(hand) {
-            return hand.map(c => c.r).sort((a, b) => b - a);
-        }
-
-        function evalFront(cards) {
-            const counts = rankCounts(cards);
-            const entries = Object.entries(counts).map(([r, n]) => [+r, n]).sort((a, b) => b[0] - a[0]);
-            if (entries.some(([, n]) => n === 3)) {
-                const trip = entries.find(([, n]) => n === 3)[0];
-                return { cat: 2, name: 'Three of a Kind', kickers: [trip] };
-            }
-            if (entries.some(([, n]) => n === 2)) {
-                const pair = entries.find(([, n]) => n === 2)[0];
-                const kicker = entries.find(([, n]) => n === 1)[0];
-                return { cat: 1, name: 'Pair', kickers: [pair, kicker] };
-            }
-            const ks = sortedRanksDesc(cards);
-            return { cat: 0, name: 'High Card', kickers: ks };
-        }
-
-        function evalFive(cards) {
-            const counts = rankCounts(cards);
-            const byCount = Object.entries(counts).map(([r, n]) => ({ r: +r, n })).sort((a, b) => b.n - a.n || b.r - a.r);
-            const ranks = sortedRanksDesc(cards);
-            const flush = isFlush(cards);
-            const sh = straightHigh(cards);
-            const sf = flush && sh !== null;
-
-            if (sf) return { cat: 8, name: 'Straight Flush', kickers: [sh] };
-            if (byCount[0].n === 4) {
-                const quad = byCount[0].r, kicker = byCount[1].r;
-                return { cat: 7, name: 'Four of a Kind', kickers: [quad, kicker] };
-            }
-            if (byCount[0].n === 3 && byCount[1].n === 2) {
-                return { cat: 6, name: 'Full House', kickers: [byCount[0].r, byCount[1].r] };
-            }
-            if (flush) return { cat: 5, name: 'Flush', kickers: ranks };
-            if (sh !== null) return { cat: 4, name: 'Straight', kickers: [sh] };
-            if (byCount[0].n === 3) {
-                const trip = byCount[0].r;
-                const kickers = ranks.filter(r => r !== trip);
-                return { cat: 3, name: 'Three of a Kind', kickers: [trip, ...kickers] };
-            }
-            if (byCount[0].n === 2 && byCount[1].n === 2) {
-                const hi = Math.max(byCount[0].r, byCount[1].r), lo = Math.min(byCount[0].r, byCount[1].r);
-                const k = byCount.find(x => x.n === 1).r;
-                return { cat: 2, name: 'Two Pair', kickers: [hi, lo, k] };
-            }
-            if (byCount[0].n === 2) {
-                const pair = byCount[0].r;
-                const kickers = ranks.filter(r => r !== pair);
-                return { cat: 1, name: 'Pair', kickers: [pair, ...kickers] };
-            }
-            return { cat: 0, name: 'High Card', kickers: ranks };
-        }
-
-        function compareEval(a, b) {
-            if (a.cat !== b.cat) return a.cat - b.cat;
-            const len = Math.max(a.kickers.length, b.kickers.length);
-            for (let i = 0; i < len; i++) {
-                const av = a.kickers[i] || 0, bv = b.kickers[i] || 0;
-                if (av !== bv) return av - bv;
-            }
-            return 0;
-        }
-
-        /** 5-card vs 5-card: positive if handA wins */
-        function beatsFive(handA, handB) {
-            return compareEval(evalFive(handA), evalFive(handB)) > 0;
-        }
-
-        /**
-         * Chinese poker foul rule: middle must beat front.
-         * Cross-size comparison — e.g. front pair needs middle pair+ with higher kickers,
-         * front trips only allows middle high card or two-pair+ (not a lone pair).
-         */
-        function beatsFront(middle, front) {
-            const m = evalFive(middle);
-            const f = evalFront(front);
-
-            if (f.cat === 2) {
-                if (m.cat === 1) return false;
-                return true;
-            }
-            if (f.cat === 1) {
-                if (m.cat === 0) return false;
-                if (m.cat > 1) return true;
-                return compareEval(m, { cat: 1, kickers: f.kickers }) > 0;
-            }
-            if (m.cat >= 1) return true;
-            return compareEval(m, f) > 0;
-        }
-
-        function isValidArrangement(front, middle, back) {
-            return beatsFive(back, middle) && beatsFront(middle, front);
-        }
-
-        function encodeEval(e) {
-            let kickers = 0;
-            for (const k of e.kickers) kickers = kickers * 100 + k;
-            return e.cat * 1e10 + kickers;
-        }
-
-        function handStrengthScore(front, middle, back) {
-            return encodeEval(evalFive(back)) * 1e12
-                + encodeEval(evalFive(middle)) * 1e6
-                + encodeEval(evalFront(front));
-        }
-
-        // --- Royalties ---
-        function getRowRoyalty(hand, row, variant) {
-            const cfg = config[variant].royalties_bonuses;
-            let key = null, payout = 0;
-            if (row === 'front') {
-                if (isThreeOfAKind(hand)) { key = 'three_of_a_kind'; payout = cfg.front_3_cards.three_of_a_kind; }
-            } else if (row === 'middle') {
-                if (isStraightFlush(hand)) { key = 'straight_flush'; payout = cfg.middle_5_cards.straight_flush; }
-                else if (isFourOfAKind(hand)) { key = 'four_of_a_kind'; payout = cfg.middle_5_cards.four_of_a_kind; }
-                else if (isFullHouse(hand)) { key = 'full_house'; payout = cfg.middle_5_cards.full_house; }
-            } else if (row === 'back') {
-                if (isStraightFlush(hand)) { key = 'straight_flush'; payout = cfg.back_5_cards.straight_flush; }
-                else if (isFourOfAKind(hand)) { key = 'four_of_a_kind'; payout = cfg.back_5_cards.four_of_a_kind; }
-            }
-            return { key, payout, label: key ? ROYALTY_LABELS[key] : null };
-        }
-
-        function getArrangementRoyalties(front, middle, back, variant) {
-            const f = getRowRoyalty(front, 'front', variant);
-            const m = getRowRoyalty(middle, 'middle', variant);
-            const b = getRowRoyalty(back, 'back', variant);
-            return { front: f, middle: m, back: b, total: f.payout + m.payout + b.payout };
-        }
-
-        function detectPossibleRoyalties(cards, variant) {
-            const idx = [...Array(13).keys()];
-            const possible = new Set();
-            combinations(idx, 3).forEach(fIdx => {
-                const front = fIdx.map(i => cards[i]);
-                const rem = idx.filter(i => !fIdx.includes(i));
-                combinations(rem, 5).forEach(mIdx => {
-                    const middle = mIdx.map(i => cards[i]);
-                    const bIdx = rem.filter(i => !mIdx.includes(i));
-                    const back = bIdx.map(i => cards[i]);
-                    if (!isValidArrangement(front, middle, back)) return;
-                    if (isThreeOfAKind(front)) possible.add('front:three_of_a_kind');
-                    const mr = getRowRoyalty(middle, 'middle', variant);
-                    const br = getRowRoyalty(back, 'back', variant);
-                    if (mr.key) possible.add(`middle:${mr.key}`);
-                    if (br.key) possible.add(`back:${br.key}`);
-                });
-            });
-            return [...possible];
-        }
-
-        // --- Naturals ---
-        function detectThreeOfType(cards, predicate, sizes) {
-            const idx = [...Array(cards.length).keys()];
-            for (const c1 of combinations(idx, sizes[0])) {
-                const hand1 = c1.map(i => cards[i]);
-                if (!predicate(hand1)) continue;
-                const rem1 = idx.filter(i => !c1.includes(i));
-                for (const c2 of combinations(rem1, sizes[1])) {
-                    const hand2 = c2.map(i => cards[i]);
-                    if (!predicate(hand2)) continue;
-                    const rem2 = rem1.filter(i => !c2.includes(i));
-                    const hand3 = rem2.map(i => cards[i]);
-                    if (hand3.length === sizes[2] && predicate(hand3)) return true;
-                }
-            }
-            return false;
-        }
-
-        function detectNaturals(cards, variant) {
-            const found = [];
-            const counts = rankCounts(cards);
-            const rankVals = Object.keys(counts).map(Number);
-            const uniqueRanks = rankVals.length;
-            const suitVals = {};
-            cards.forEach(c => { suitVals[c.s] = (suitVals[c.s] || 0) + 1; });
-            const pairs = Object.values(counts).filter(n => n === 2).length;
-            const trips = Object.values(counts).filter(n => n === 3).length;
-            const natCfg = config[variant].naturals_automatic_wins;
-
-            if (variant === 'traditional_chinese_poker') {
-                if (uniqueRanks === 13 && Object.keys(suitVals).length === 1) found.push({ key: 'clean_dragon', payout: natCfg.clean_dragon });
-                else if (uniqueRanks === 13) found.push({ key: 'dragon', payout: natCfg.dragon });
-                if (Object.keys(suitVals).length === 4) found.push({ key: 'all_colors', payout: natCfg.all_colors });
             } else {
-                if (uniqueRanks === 13 && Object.keys(suitVals).length === 1) {
-                    found.push({ key: 'dragon_same_suit', payout: natCfg.dragon_same_suit });
-                } else if (uniqueRanks === 13) {
-                    found.push({ key: 'dragon_mixed_suit', payout: natCfg.dragon_mixed_suit });
-                }
-                if (pairs === 5 && trips === 1) found.push({ key: 'five_pairs_one_trips', payout: natCfg.five_pairs_one_trips });
+                matchEl.textContent = '';
             }
-
-            if (pairs === 6) found.push({ key: 'six_pairs', payout: natCfg.six_pairs });
-            if (detectThreeOfType(cards, isFlush, [3, 5, 5])) found.push({ key: 'three_flushes', payout: natCfg.three_flushes });
-            if (detectThreeOfType(cards, isStraight, [3, 5, 5])) found.push({ key: 'three_straights', payout: natCfg.three_straights });
-
-            return found;
         }
 
-        function getAcePayout(front, cards, variant) {
-            if (variant !== 'vietnamese_mau_binh') return { key: null, payout: 0, label: null };
-            const aceCount = cards.filter(c => c.r === 14).length;
-            const frontAces = front.filter(c => c.r === 14).length;
-            const ap = config.vietnamese_mau_binh.ace_payouts;
-            if (aceCount === 0) return { key: 'no_aces_penalty', payout: ap.no_aces_penalty, label: 'No Aces' };
-            if (aceCount === 4) return { key: 'four_aces', payout: ap.four_aces, label: 'Four Aces' };
-            if (aceCount === 3 && frontAces === 3) return { key: 'three_aces_front_hand', payout: ap.three_aces_front_hand, label: 'Three Aces (Front)' };
-            if (aceCount === 3) return { key: 'three_aces', payout: ap.three_aces, label: 'Three Aces' };
-            if (aceCount === 2) return { key: 'two_aces', payout: ap.two_aces, label: 'Two Aces' };
-            return { key: null, payout: 0, label: null };
-        }
-
-        // --- Solver ---
-        function solveHands(cards, variant) {
-            const idx = [...Array(13).keys()];
-            const valid = [];
-
-            for (const fIdx of combinations(idx, 3)) {
-                const front = fIdx.map(i => cards[i]);
-                const rem1 = idx.filter(i => !fIdx.includes(i));
-                for (const mIdx of combinations(rem1, 5)) {
-                    const middle = mIdx.map(i => cards[i]);
-                    const bIdx = rem1.filter(i => !mIdx.includes(i));
-                    const back = bIdx.map(i => cards[i]);
-                    if (!isValidArrangement(front, middle, back)) continue;
-
-                    const frontEval = evalFront(front);
-                    const midEval = evalFive(middle);
-                    const backEval = evalFive(back);
-                    const royalties = getArrangementRoyalties(front, middle, back, variant);
-                    const ace = getAcePayout(front, cards, variant);
-                    const royaltyTotal = royalties.total;
-                    const totalPayout = royaltyTotal + ace.payout;
-                    const strength = handStrengthScore(front, middle, back);
-                    const arrangementScore = strength + ace.payout * 1e7;
-
-                    valid.push({
-                        front, middle, back,
-                        frontEval, midEval, backEval,
-                        royalties, ace,
-                        royaltyTotal, totalPayout, strength, arrangementScore,
-                        hasRoyalties: royaltyTotal > 0
-                    });
-                }
+        document.getElementById('import-btn').addEventListener('click', () => loadTestCaseFromJson(false));
+        document.getElementById('import-solve-btn').addEventListener('click', () => loadTestCaseFromJson(true));
+        document.getElementById('copy-json-btn').addEventListener('click', async () => {
+            const ta = document.getElementById('export-json');
+            ta.select();
+            try {
+                await navigator.clipboard.writeText(ta.value);
+                document.getElementById('match-status').textContent = 'Copied to clipboard.';
+                document.getElementById('match-status').className = 'match-ok';
+            } catch {
+                document.execCommand('copy');
             }
-
-            valid.sort((a, b) => {
-                if (b.royaltyTotal !== a.royaltyTotal) return b.royaltyTotal - a.royaltyTotal;
-                return b.arrangementScore - a.arrangementScore;
-            });
-
-            const naturals = detectNaturals(cards, variant);
-            const possibleRoyalties = detectPossibleRoyalties(cards, variant);
-            const hasRoyaltyPotential = possibleRoyalties.length > 0;
-
-            return {
-                arrangements: valid.slice(0, 8),
-                naturals,
-                possibleRoyalties,
-                hasRoyaltyPotential,
-                totalValid: valid.length
-            };
-        }
+        });
 
         // --- Rendering ---
         function formatPayout(n) {
@@ -814,6 +562,7 @@
 
             if (!arrangements.length) {
                 container.innerHTML += '<p style="text-align:center;color:#6b7280">No valid arrangements found for these cards.</p>';
+                updateExportJson(selectedCards, variant, results);
                 return;
             }
 
@@ -848,9 +597,22 @@
                 note.textContent = `Top ${arrangements.length} of ${results.totalValid} valid setups (royalties first, then strongest hands).`;
                 container.appendChild(note);
             }
+
+            updateExportJson(selectedCards, variant, results);
         }
 
         buildDeck();
+        const presetJson = sessionStorage.getItem('presetTestCase');
+        if (presetJson) {
+            sessionStorage.removeItem('presetTestCase');
+            document.getElementById('import-json').value = presetJson;
+            try { lastExpectedSetup = parseTestCase(presetJson).expected_setup; } catch { /* ignore */ }
+        }
+        const preset = loadPreset();
+        if (preset) applyPreset(preset);
+        if (new URLSearchParams(location.search).get('auto') === '1' && selectedCards.length === 13) {
+            startSolving();
+        }
     </script>
 </body>
 </html>

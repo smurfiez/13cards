@@ -1,0 +1,23 @@
+{
+  "variant": "traditional_chinese_poker",
+  "cards": [
+    "As", "Ah", "Ad", "Ks", "Kh", "Qc", "Jd", "Ts", "9s", "8h", "7c", "6d", "5s"
+  ],
+  "expected_setup": {
+    "front": {
+      "cards": ["As", "Ah", "7c"],
+      "hand": "Pair",
+      "royalty": null
+    },
+    "middle": {
+      "cards": ["Ks", "Kh", "Qc", "Jd", "Ts"],
+      "hand": "Pair"
+    },
+    "back": {
+      "cards": ["Ad", "9s", "8h", "6d", "5s"],
+      "hand": "High Card"
+    },
+    "royalty_total": 0,
+    "total_payout": 0
+  }
+}
