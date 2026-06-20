@@ -220,6 +220,12 @@ function detectThreeOfType(cards, predicate, sizes) {
     return false;
 }
 
+function isRedSuit(s) { return s === 'h' || s === 'd'; }
+
+function isAllSameColor(cards) {
+    return cards.every(c => isRedSuit(c.s)) || cards.every(c => !isRedSuit(c.s));
+}
+
 function detectNaturals(cards, variant) {
     const found = [];
     const counts = rankCounts(cards);
@@ -234,7 +240,7 @@ function detectNaturals(cards, variant) {
     if (variant === 'traditional_chinese_poker') {
         if (uniqueRanks === 13 && Object.keys(suitVals).length === 1) found.push({ key: 'clean_dragon', payout: natCfg.clean_dragon });
         else if (uniqueRanks === 13) found.push({ key: 'dragon', payout: natCfg.dragon });
-        if (Object.keys(suitVals).length === 4) found.push({ key: 'all_colors', payout: natCfg.all_colors });
+        if (isAllSameColor(cards)) found.push({ key: 'all_colors', payout: natCfg.all_colors });
     } else {
         if (uniqueRanks === 13 && Object.keys(suitVals).length === 1) {
             found.push({ key: 'dragon_same_suit', payout: natCfg.dragon_same_suit });

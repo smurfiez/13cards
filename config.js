@@ -30,7 +30,7 @@ const config = {
 const NATURAL_LABELS = {
     dragon: 'Dragon',
     clean_dragon: 'Clean Dragon',
-    all_colors: 'All Colors',
+    all_colors: 'All Red or All Black',
     six_pairs: 'Six Pairs',
     three_flushes: 'Three Flushes',
     three_straights: 'Three Straights',
