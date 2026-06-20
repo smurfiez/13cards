@@ -94,11 +94,11 @@
 <body>
 
     <nav class="top-nav">
-        <a href="index.html">Solver</a>
-        <a href="payouts.html">Payouts</a>
-        <a href="random.html" class="active">Random</a>
-        <a href="compare.html">Compare</a>
-        <a href="ofc.html">OFC</a>
+        <a href="/">Solver</a>
+        <a href="/payouts">Payouts</a>
+        <a href="/random" class="active">Random</a>
+        <a href="/compare">Compare</a>
+        <a href="/ofc">OFC</a>
     </nav>
 
     <h1>Random Hand</h1>
@@ -157,7 +157,7 @@
         document.getElementById('solver-btn').addEventListener('click', () => {
             savePreset(currentHand.map(c => c.id));
             sessionStorage.setItem('presetTestCase', document.getElementById('json-output').value);
-            window.location.href = 'index.html?auto=1';
+            window.location.href = '/?auto=1';
         });
         document.getElementById('copy-btn').addEventListener('click', async () => {
             const ta = document.getElementById('json-output');

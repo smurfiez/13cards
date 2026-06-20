@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3';
+const CACHE_VERSION = '4';
 const CACHE_NAME = `13cards-${CACHE_VERSION}`;
 
 const PRECACHE = [
@@ -8,6 +8,11 @@ const PRECACHE = [
     './random.html',
     './compare.html',
     './ofc.html',
+    '/',
+    '/random',
+    '/payouts',
+    '/compare',
+    '/ofc',
     './cards.js',
     './config.js',
     './solver.js',
@@ -17,7 +22,7 @@ const PRECACHE = [
     './editor.js',
     './scoring.js',
     './app.css',
-    './manifest.webmanifest',
+    './_redirects',
     './pwa.js',
     './pwa.css',
     './icons/icon.svg',
@@ -25,6 +30,33 @@ const PRECACHE = [
     './icons/icon-512.png',
     './icons/apple-touch-icon.png'
 ];
+
+/** Map clean URLs (Cloudflare Pages) to cached .html assets */
+const PATH_TO_HTML = {
+    '/': './index.html',
+    '/random': './random.html',
+    '/payouts': './payouts.html',
+    '/compare': './compare.html',
+    '/ofc': './ofc.html'
+};
+
+async function lookupCache(request) {
+    const hit = await caches.match(request);
+    if (hit) return hit;
+
+    const { pathname } = new URL(request.url);
+    const htmlPath = PATH_TO_HTML[pathname];
+    if (htmlPath) {
+        const alias = await caches.match(htmlPath);
+        if (alias) return alias;
+    }
+    if (pathname.endsWith('.html')) {
+        const bare = pathname.replace(/\.html$/, '');
+        const mapped = PATH_TO_HTML[bare];
+        if (mapped) return caches.match(mapped);
+    }
+    return null;
+}
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -50,8 +82,10 @@ self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
 
     event.respondWith(
-        caches.match(event.request).then((cached) => {
-            const network = fetch(event.request)
+        lookupCache(event.request).then((cached) => {
+            if (cached) return cached;
+
+            return fetch(event.request)
                 .then((response) => {
                     if (response && response.status === 200 && response.type === 'basic') {
                         const copy = response.clone();
@@ -59,9 +93,11 @@ self.addEventListener('fetch', (event) => {
                     }
                     return response;
                 })
-                .catch(() => cached);
-
-            return cached || network;
+                .catch(async () => {
+                    const fallback = await lookupCache(event.request);
+                    if (fallback) return fallback;
+                    return caches.match('./index.html');
+                });
         })
     );
 });
