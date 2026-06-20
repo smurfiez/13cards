@@ -3,9 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Chinese Poker and Vietnamese Mậu Binh 13-card hand solver with royalties, naturals, and JSON test cases.">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="theme-color" content="#f3f4f6">
+    <meta name="apple-mobile-web-app-title" content="13 Cards">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="stylesheet" href="pwa.css">
+    <link rel="stylesheet" href="app.css">
     <title>13 Cards Best Hand Solver</title>
     <style>
         :root {
@@ -289,6 +296,8 @@
         <a href="index.html" class="active">Solver</a>
         <a href="payouts.html">Payouts</a>
         <a href="random.html">Random</a>
+        <a href="compare.html">Compare</a>
+        <a href="ofc.html">OFC</a>
     </nav>
 
     <h1>13 Cards Solver</h1>
@@ -306,6 +315,16 @@
             </label>
         </div>
         <div id="deck-grid"></div>
+
+        <div id="manual-section" style="margin-top:14px;">
+            <h3 style="font-size:0.8125rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin:0 0 6px;">Manual layout</h3>
+            <p class="json-hint" style="margin-bottom:10px;">Drag or tap cards into rows — foul check updates live</p>
+            <div id="manual-editor-root"></div>
+            <div class="json-actions">
+                <button type="button" class="btn btn-clear" id="editor-pool-all">All to pool</button>
+                <button type="button" class="btn btn-primary" id="editor-apply-top" disabled>Apply solver #1</button>
+            </div>
+        </div>
 
         <div class="json-panel">
             <h3>Import test case (JSON)</h3>
@@ -343,6 +362,10 @@
     <script src="config.js"></script>
     <script src="solver.js"></script>
     <script src="testcase.js"></script>
+    <script src="haptic.js"></script>
+    <script src="ui.js"></script>
+    <script src="editor.js"></script>
+    <script src="pwa.js"></script>
     <script>
         const suits = SUITS;
         const ranks = RANKS;
@@ -350,6 +373,25 @@
 
         let selectedCards = [];
         let lastResults = null;
+        let lastTopArrangement = null;
+        let manualEditor = null;
+
+        function initManualEditor() {
+            manualEditor = createManualRowEditor(document.getElementById('manual-editor-root'), {
+                variant: getVariant(),
+                onChange: () => {
+                    document.getElementById('editor-apply-top').disabled = !lastTopArrangement || selectedCards.length !== 13;
+                }
+            });
+            syncManualEditor();
+        }
+
+        function syncManualEditor() {
+            if (!manualEditor) return;
+            manualEditor.setVariant(getVariant());
+            manualEditor.syncCards(selectedCards);
+            document.getElementById('editor-apply-top').disabled = !lastTopArrangement || selectedCards.length !== 13;
+        }
 
         function getVariant() {
             return document.querySelector('input[name=variant]:checked').value;
@@ -389,6 +431,7 @@
         }
 
         function toggleCard(rank, suit, btnElement) {
+            hapticTap();
             const cardId = `${rank}${suit.id}`;
             const index = selectedCards.findIndex(c => c.id === cardId);
             if (index > -1) {
@@ -403,6 +446,7 @@
                 btnElement.classList.add('selected');
             }
             updateStatus();
+            syncManualEditor();
         }
 
         function applyPreset(cardIds) {
@@ -420,8 +464,10 @@
 
         function clearSelection() {
             selectedCards = [];
+            lastTopArrangement = null;
             document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
             updateStatus();
+            syncManualEditor();
             document.getElementById('results-section').style.display = 'none';
             lastResults = null;
         }
@@ -441,6 +487,7 @@
 
         document.querySelectorAll('input[name=variant]').forEach(r => {
             r.addEventListener('change', () => {
+                if (manualEditor) manualEditor.setVariant(getVariant());
                 if (lastResults && selectedCards.length === 13) startSolving();
             });
         });
@@ -562,9 +609,14 @@
 
             if (!arrangements.length) {
                 container.innerHTML += '<p style="text-align:center;color:#6b7280">No valid arrangements found for these cards.</p>';
+                lastTopArrangement = null;
                 updateExportJson(selectedCards, variant, results);
+                syncManualEditor();
                 return;
             }
+
+            lastTopArrangement = arrangements[0];
+            syncManualEditor();
 
             arrangements.forEach((arr, i) => {
                 const card = document.createElement('div');
@@ -602,6 +654,24 @@
         }
 
         buildDeck();
+        initManualEditor();
+
+        document.getElementById('editor-pool-all').addEventListener('click', () => {
+            hapticTap();
+            if (!manualEditor || !selectedCards.length) return;
+            manualEditor.applyArrangement([], [], []);
+            manualEditor.syncCards(selectedCards);
+        });
+        document.getElementById('editor-apply-top').addEventListener('click', () => {
+            if (!lastTopArrangement || !manualEditor) return;
+            hapticSuccess();
+            manualEditor.applyArrangement(
+                lastTopArrangement.front,
+                lastTopArrangement.middle,
+                lastTopArrangement.back
+            );
+        });
+
         const presetJson = sessionStorage.getItem('presetTestCase');
         if (presetJson) {
             sessionStorage.removeItem('presetTestCase');

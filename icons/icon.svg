@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="13 Cards">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <rect x="88" y="96" width="112" height="152" rx="16" fill="#fff" fill-opacity="0.95"/>
+  <rect x="200" y="128" width="112" height="152" rx="16" fill="#fff" fill-opacity="0.82"/>
+  <rect x="312" y="160" width="112" height="152" rx="16" fill="#fff" fill-opacity="0.68"/>
+  <text x="256" y="400" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="88" font-weight="800" fill="#fff">13</text>
+</svg>

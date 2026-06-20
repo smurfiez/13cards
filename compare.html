@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Compare 2–4 Chinese Poker hands head-to-head with foul detection and royalties.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="13 Cards">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="stylesheet" href="pwa.css">
+    <link rel="stylesheet" href="app.css">
+    <title>Compare — 13 Cards</title>
+</head>
+<body class="app-body">
+
+    <nav class="top-nav">
+        <a href="index.html">Solver</a>
+        <a href="payouts.html">Payouts</a>
+        <a href="random.html">Random</a>
+        <a href="compare.html" class="active">Compare</a>
+        <a href="ofc.html">OFC</a>
+    </nav>
+
+    <h1>Head to Head</h1>
+    <p class="subtitle">2–4 players · 1-6 scoring · row royalties · fouls</p>
+
+    <div class="section">
+        <div class="variant-segment" role="radiogroup">
+            <label><input type="radio" name="variant" value="traditional_chinese_poker" checked><span>China</span></label>
+            <label><input type="radio" name="variant" value="vietnamese_mau_binh"><span>Vietnam</span></label>
+        </div>
+
+        <div class="player-count-segment" id="player-count">
+            <button type="button" data-n="2" class="active">2 players</button>
+            <button type="button" data-n="3">3 players</button>
+            <button type="button" data-n="4">4 players</button>
+        </div>
+
+        <div id="players-root"></div>
+
+        <div class="action-bar">
+            <button type="button" class="btn btn-secondary" id="auto-all-btn">Auto-arrange all</button>
+            <button type="button" class="btn btn-primary" id="score-btn">Score match</button>
+        </div>
+    </div>
+
+    <div class="section" id="results-section" style="display:none;">
+        <h2>Totals</h2>
+        <div id="totals-root"></div>
+        <h2 style="margin-top:16px;">Pairings</h2>
+        <div id="pairings-root"></div>
+    </div>
+
+    <script src="cards.js"></script>
+    <script src="config.js"></script>
+    <script src="solver.js"></script>
+    <script src="haptic.js"></script>
+    <script src="ui.js"></script>
+    <script src="editor.js"></script>
+    <script src="scoring.js"></script>
+    <script src="pwa.js"></script>
+    <script>
+        let playerCount = 2;
+        const playerState = [];
+
+        function getVariant() {
+            return document.querySelector('input[name=variant]:checked').value;
+        }
+
+        function buildPlayerPanels() {
+            const root = document.getElementById('players-root');
+            root.innerHTML = '';
+            playerState.length = 0;
+
+            for (let i = 0; i < playerCount; i++) {
+                const panel = document.createElement('div');
+                panel.className = 'player-panel';
+                panel.innerHTML = `
+                    <h3>Player ${i + 1}</h3>
+                    <textarea class="card-input" data-idx="${i}" placeholder="13 cards: As Kh Qd Jc Ts 9h 8d 7s 6c 5h 4d 3s 2c"></textarea>
+                    <div class="player-actions">
+                        <button type="button" class="btn btn-secondary" data-action="shuffle" data-idx="${i}">Random</button>
+                        <button type="button" class="btn btn-primary" data-action="auto" data-idx="${i}">Auto-arrange</button>
+                    </div>
+                    <div class="editor-mount" data-idx="${i}"></div>
+                `;
+                root.appendChild(panel);
+
+                const state = {
+                    cards: [],
+                    editor: null,
+                    setup: { front: [], middle: [], back: [] }
+                };
+                playerState[i] = state;
+
+                const mount = panel.querySelector('.editor-mount');
+                state.editor = createManualRowEditor(mount, {
+                    variant: getVariant(),
+                    onChange: (layout) => {
+                        state.setup = layout.rows;
+                        state.cards = [...layout.rows.front, ...layout.rows.middle, ...layout.rows.back, ...layout.pool];
+                    }
+                });
+            }
+
+            root.querySelectorAll('[data-action="shuffle"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    hapticTap();
+                    const idx = +btn.dataset.idx;
+                    const cards = random13();
+                    loadPlayerCards(idx, cards);
+                });
+            });
+            root.querySelectorAll('[data-action="auto"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    hapticTap();
+                    autoArrangePlayer(+btn.dataset.idx);
+                });
+            });
+            root.querySelectorAll('.card-input').forEach(ta => {
+                ta.addEventListener('change', () => {
+                    try {
+                        const cards = parseCardIds(ta.value);
+                        loadPlayerCards(+ta.dataset.idx, cards);
+                        ta.classList.remove('input-error');
+                    } catch (e) {
+                        ta.classList.add('input-error');
+                        alert(e.message);
+                    }
+                });
+            });
+        }
+
+        function loadPlayerCards(idx, cards) {
+            const state = playerState[idx];
+            state.cards = cards;
+            const ta = document.querySelector(`.card-input[data-idx="${idx}"]`);
+            if (ta) ta.value = cards.map(c => c.id).join(' ');
+            state.editor.syncCards(cards);
+            autoArrangePlayer(idx);
+        }
+
+        function autoArrangePlayer(idx) {
+            const state = playerState[idx];
+            if (state.cards.length !== 13) return;
+            try {
+                const setup = autoSetupFromCards(state.cards, getVariant());
+                state.setup = { front: setup.front, middle: setup.middle, back: setup.back };
+                state.editor.applyArrangement(setup.front, setup.middle, setup.back);
+                hapticSuccess();
+            } catch (e) {
+                hapticError();
+                alert(e.message);
+            }
+        }
+
+        function gatherPlayers() {
+            const variant = getVariant();
+            const players = [];
+            for (let i = 0; i < playerCount; i++) {
+                const state = playerState[i];
+                const layout = state.editor.getLayout();
+                if (!layout.complete) throw new Error(`Player ${i + 1}: assign all cards to front / middle / back.`);
+                const allCards = [...layout.rows.front, ...layout.rows.middle, ...layout.rows.back];
+                players.push({
+                    name: `Player ${i + 1}`,
+                    cards: allCards,
+                    setup: layout.rows
+                });
+            }
+            return { players, variant };
+        }
+
+        function renderResults(result) {
+            document.getElementById('results-section').style.display = 'block';
+            const totalsRoot = document.getElementById('totals-root');
+            totalsRoot.innerHTML = `<table class="score-table"><thead><tr><th>Player</th><th>Net</th><th>Foul?</th></tr></thead><tbody>
+                ${result.players.map((p, i) => {
+                    const foul = isPlayerFouled(p.setup);
+                    return `<tr><td>${p.name}</td><td class="score-total">${formatPayout(result.totals[i])}</td><td>${foul ? '<span class="foul-tag">FOUL</span>' : '—'}</td></tr>`;
+                }).join('')}
+            </tbody></table>`;
+
+            const pairRoot = document.getElementById('pairings-root');
+            let html = '';
+            for (let i = 0; i < result.players.length; i++) {
+                for (let j = i + 1; j < result.players.length; j++) {
+                    const m = result.matrix[i][j];
+                    html += `<div class="player-panel"><h3>${result.players[i].name} vs ${result.players[j].name}</h3>
+                        <p class="match-detail">Net: ${formatPayout(m.netA)} / ${formatPayout(m.netB)}${m.breakdown.note ? ` · ${m.breakdown.note}` : ''}</p>
+                        <table class="score-table"><thead><tr><th>Row</th><th>${result.players[i].name}</th><th>${result.players[j].name}</th><th>Hands</th></tr></thead><tbody>
+                        ${m.breakdown.rows.map(r => `<tr><td>${r.label}</td><td>${formatPayout(r.a)}</td><td>${formatPayout(r.b)}</td><td class="match-detail">${r.handA} vs ${r.handB}</td></tr>`).join('')}
+                        </tbody></table></div>`;
+                }
+            }
+            pairRoot.innerHTML = html;
+            document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        document.getElementById('player-count').addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-n]');
+            if (!btn) return;
+            hapticTap();
+            playerCount = +btn.dataset.n;
+            document.querySelectorAll('#player-count button').forEach(b => b.classList.toggle('active', b === btn));
+            buildPlayerPanels();
+        });
+
+        document.getElementById('auto-all-btn').addEventListener('click', () => {
+            hapticTap();
+            for (let i = 0; i < playerCount; i++) {
+                const ta = document.querySelector(`.card-input[data-idx="${i}"]`);
+                if (ta && ta.value.trim()) {
+                    try { loadPlayerCards(i, parseCardIds(ta.value)); } catch { /* skip */ }
+                }
+                autoArrangePlayer(i);
+            }
+        });
+
+        document.getElementById('score-btn').addEventListener('click', () => {
+            try {
+                const { players, variant } = gatherPlayers();
+                const result = scoreHeadToHead(players, variant);
+                renderResults(result);
+                hapticSuccess();
+            } catch (e) {
+                hapticError();
+                alert(e.message);
+            }
+        });
+
+        document.querySelectorAll('input[name=variant]').forEach(r => {
+            r.addEventListener('change', () => {
+                playerState.forEach(s => s.editor.setVariant(getVariant()));
+            });
+        });
+
+        buildPlayerPanels();
+        loadPlayerCards(0, random13());
+        loadPlayerCards(1, random13());
+    </script>
+</body>
+</html>

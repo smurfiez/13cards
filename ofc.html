@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Open-face Chinese poker — place cards one at a time with live foul checking.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="13 Cards">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="stylesheet" href="pwa.css">
+    <link rel="stylesheet" href="app.css">
+    <title>OFC — 13 Cards</title>
+</head>
+<body class="app-body">
+
+    <nav class="top-nav">
+        <a href="index.html">Solver</a>
+        <a href="payouts.html">Payouts</a>
+        <a href="random.html">Random</a>
+        <a href="compare.html">Compare</a>
+        <a href="ofc.html" class="active">OFC</a>
+    </nav>
+
+    <h1>Open-Face Chinese</h1>
+    <p class="subtitle">Classic OFC — one card at a time, all face up</p>
+
+    <div class="section">
+        <div class="variant-segment" role="radiogroup">
+            <label><input type="radio" name="variant" value="traditional_chinese_poker" checked><span>China</span></label>
+            <label><input type="radio" name="variant" value="vietnamese_mau_binh"><span>Vietnam</span></label>
+        </div>
+
+        <div id="status-banner" class="status-banner ok">Tap a highlighted slot to place your card.</div>
+        <p class="ofc-progress" id="ofc-progress">Card 0 of 13</p>
+
+        <div class="ofc-deal" id="ofc-deal" style="display:none;">
+            <div class="ofc-deal-label">Place this card</div>
+            <div class="ofc-deal-card" id="ofc-deal-card"></div>
+        </div>
+
+        <div class="ofc-board" id="ofc-board">
+            <div>
+                <div class="ofc-row-label">Back (5)</div>
+                <div class="ofc-slots" data-row="back"></div>
+            </div>
+            <div>
+                <div class="ofc-row-label">Middle (5)</div>
+                <div class="ofc-slots" data-row="middle"></div>
+            </div>
+            <div>
+                <div class="ofc-row-label">Front (3)</div>
+                <div class="ofc-slots" data-row="front"></div>
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <button type="button" class="btn btn-secondary" id="new-game-btn">New hand</button>
+            <button type="button" class="btn btn-primary" id="solver-hint-btn" disabled>Solver hint</button>
+        </div>
+    </div>
+
+    <div class="section" id="ofc-results" style="display:none;">
+        <h2>Final hand</h2>
+        <div id="ofc-eval-root"></div>
+    </div>
+
+    <script src="cards.js"></script>
+    <script src="config.js"></script>
+    <script src="solver.js"></script>
+    <script src="haptic.js"></script>
+    <script src="ui.js"></script>
+    <script src="editor.js"></script>
+    <script src="pwa.js"></script>
+    <script>
+        const ROW_LIMITS = { front: 3, middle: 5, back: 5 };
+        const ROW_ORDER = ['back', 'middle', 'front'];
+
+        let game = null;
+
+        function getVariant() {
+            return document.querySelector('input[name=variant]:checked').value;
+        }
+
+        function newGame() {
+            const hand = shuffleInPlace(buildFullDeck()).slice(0, 13);
+            game = {
+                hand,
+                dealIndex: 0,
+                rows: { front: [], middle: [], back: [] },
+                complete: false
+            };
+            document.getElementById('ofc-results').style.display = 'none';
+            render();
+            hapticTap();
+        }
+
+        function currentCard() {
+            return game && !game.complete ? game.hand[game.dealIndex] : null;
+        }
+
+        function canPlace(row) {
+            return game.rows[row].length < ROW_LIMITS[row];
+        }
+
+        function evaluateCurrent() {
+            return evaluateLayout(game.rows, [...game.rows.front, ...game.rows.middle, ...game.rows.back], getVariant());
+        }
+
+        function updateStatus() {
+            const banner = document.getElementById('status-banner');
+            const eval_ = evaluateCurrent();
+            const placed = game.rows.front.length + game.rows.middle.length + game.rows.back.length;
+
+            if (game.complete) {
+                banner.className = 'status-banner ' + (eval_.valid ? 'ok' : 'bad');
+                banner.textContent = eval_.message;
+                return;
+            }
+
+            if (placed === 0) {
+                banner.className = 'status-banner ok';
+                banner.textContent = 'Tap a highlighted slot to place your card.';
+                return;
+            }
+
+            if (!eval_.complete) {
+                banner.className = 'status-banner warn';
+                banner.textContent = `Building hand… ${eval_.message}`;
+                return;
+            }
+
+            banner.className = 'status-banner ' + (eval_.valid ? 'ok' : 'bad');
+            banner.textContent = eval_.valid
+                ? `On track — ${eval_.backEval.name} / ${eval_.midEval.name} / ${eval_.frontEval.name}`
+                : eval_.message;
+        }
+
+        function placeCard(row) {
+            const card = currentCard();
+            if (!card || !canPlace(row)) return;
+            hapticTap();
+            game.rows[row].push(card);
+            game.dealIndex++;
+            if (game.dealIndex >= 13) game.complete = true;
+            render();
+            if (game.complete) {
+                hapticSuccess();
+                showFinalResults();
+            }
+        }
+
+        function renderSlots() {
+            ROW_ORDER.forEach(rowKey => {
+                const container = document.querySelector(`.ofc-slots[data-row="${rowKey}"]`);
+                container.innerHTML = '';
+                const cards = game.rows[rowKey];
+                for (let i = 0; i < ROW_LIMITS[rowKey]; i++) {
+                    const slot = document.createElement('div');
+                    if (i < cards.length) {
+                        slot.className = 'ofc-slot filled';
+                        slot.appendChild(createMiniCardEl(cards[i], { draggable: false }));
+                    } else {
+                        slot.className = 'ofc-slot' + (currentCard() && canPlace(rowKey) ? ' can-place' : '');
+                        slot.textContent = '·';
+                        slot.addEventListener('click', () => placeCard(rowKey));
+                    }
+                    container.appendChild(slot);
+                }
+            });
+        }
+
+        function renderDeal() {
+            const dealEl = document.getElementById('ofc-deal');
+            const cardWrap = document.getElementById('ofc-deal-card');
+            const card = currentCard();
+            if (!card) {
+                dealEl.style.display = 'none';
+                return;
+            }
+            dealEl.style.display = 'block';
+            cardWrap.innerHTML = '';
+            cardWrap.appendChild(createMiniCardEl(card, { draggable: false }));
+        }
+
+        function render() {
+            document.getElementById('ofc-progress').textContent = game.complete
+                ? 'Hand complete'
+                : `Card ${game.dealIndex + 1} of 13`;
+            renderDeal();
+            renderSlots();
+            updateStatus();
+            document.getElementById('solver-hint-btn').disabled = game.complete || !currentCard();
+        }
+
+        function showFinalResults() {
+            const allCards = [...game.rows.front, ...game.rows.middle, ...game.rows.back];
+            const eval_ = evaluateLayout(game.rows, allCards, getVariant());
+            const root = document.getElementById('ofc-eval-root');
+            document.getElementById('ofc-results').style.display = 'block';
+
+            let html = `<div class="status-banner ${eval_.valid ? 'ok' : 'bad'}">${eval_.message}</div>
+                <p class="match-detail"><strong>Back</strong> ${eval_.backEval.name} · <strong>Middle</strong> ${eval_.midEval.name} · <strong>Front</strong> ${eval_.frontEval.name}</p>`;
+            if (eval_.royaltyTotal > 0) html += `<p class="match-detail">Royalties ${formatPayout(eval_.royaltyTotal)}</p>`;
+            if (eval_.ace?.label) html += `<p class="match-detail">${eval_.ace.label} ${formatPayout(eval_.ace.payout)}</p>`;
+            html += `<p class="match-detail">Total payout ${formatPayout(eval_.totalPayout)}</p>`;
+            root.innerHTML = html;
+        }
+
+        document.getElementById('new-game-btn').addEventListener('click', newGame);
+        document.getElementById('solver-hint-btn').addEventListener('click', () => {
+            if (!currentCard()) return;
+            const remaining = game.hand.slice(game.dealIndex);
+            const placed = [...game.rows.front, ...game.rows.middle, ...game.rows.back];
+            const allCards = [...placed, ...remaining];
+            const result = solveHands(allCards, getVariant());
+            const top = result.arrangements[0];
+            if (!top) {
+                hapticError();
+                alert('No valid completion from this position.');
+                return;
+            }
+            const card = currentCard();
+            let targetRow = null;
+            let handName = '';
+            ROW_ORDER.forEach(row => {
+                if (top[row].some(c => c.id === card.id) && canPlace(row)) {
+                    targetRow = row;
+                    handName = row === 'front' ? top.frontEval.name : row === 'middle' ? top.midEval.name : top.backEval.name;
+                }
+            });
+            const banner = document.getElementById('status-banner');
+            if (targetRow) {
+                hapticSuccess();
+                banner.className = 'status-banner ok';
+                banner.textContent = `Solver hint: place on ${targetRow.toUpperCase()} (part of ${handName})`;
+            } else {
+                hapticError();
+                banner.className = 'status-banner warn';
+                banner.textContent = 'Solver could not match this card to a row — pick any open slot.';
+            }
+        });
+
+        newGame();
+    </script>
+</body>
+</html>

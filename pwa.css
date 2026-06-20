@@ -1,0 +1,64 @@
+.pwa-install-btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    border: 1px solid #2563eb;
+    background: #eff6ff;
+    color: #2563eb;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    line-height: 1.2;
+}
+
+.pwa-install-btn:hover { background: #dbeafe; }
+
+.pwa-update-bar {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #1f2937;
+    color: #f9fafb;
+    font-size: 0.875rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.pwa-update-bar button {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    background: #2563eb;
+    color: white;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+
+.pwa-offline-badge {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #6b7280;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+}
+
+.pwa-offline-badge.is-offline {
+    color: #b45309;
+    background: #fffbeb;
+    border-color: #fcd34d;
+}
+
+@media (min-width: 768px) {
+    .top-nav { flex-wrap: wrap; }
+}

@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Deal a random 13-card hand and export a JSON test case for the 13 Cards solver.">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#f3f4f6">
+    <meta name="apple-mobile-web-app-title" content="13 Cards">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="stylesheet" href="pwa.css">
     <title>Random Hand — 13 Cards</title>
     <style>
         :root {
@@ -91,6 +97,8 @@
         <a href="index.html">Solver</a>
         <a href="payouts.html">Payouts</a>
         <a href="random.html" class="active">Random</a>
+        <a href="compare.html">Compare</a>
+        <a href="ofc.html">OFC</a>
     </nav>
 
     <h1>Random Hand</h1>
@@ -121,6 +129,8 @@
     <script src="config.js"></script>
     <script src="solver.js"></script>
     <script src="testcase.js"></script>
+    <script src="haptic.js"></script>
+    <script src="pwa.js"></script>
     <script>
         let currentHand = [];
 
@@ -140,7 +150,7 @@
 
         function shuffle() { renderHand(random13()); }
 
-        document.getElementById('shuffle-btn').addEventListener('click', shuffle);
+        document.getElementById('shuffle-btn').addEventListener('click', () => { hapticTap(); shuffle(); });
         document.querySelectorAll('input[name=variant]').forEach(r => r.addEventListener('change', () => {
             if (currentHand.length) renderHand(currentHand);
         }));
