@@ -1,4 +1,4 @@
-const CACHE_VERSION = '4';
+const CACHE_VERSION = '5';
 const CACHE_NAME = `13cards-${CACHE_VERSION}`;
 
 const PRECACHE = [
@@ -22,7 +22,7 @@ const PRECACHE = [
     './editor.js',
     './scoring.js',
     './app.css',
-    './_redirects',
+    './manifest.webmanifest',
     './pwa.js',
     './pwa.css',
     './icons/icon.svg',
